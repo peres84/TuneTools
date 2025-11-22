@@ -1,0 +1,56 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ],
+      "disabled": true
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": [
+        "fetch"
+      ],
+      "disabledTools": []
+    },
+    "Context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "browser_take_screenshot",
+        "browser_click",
+        "browser_resize",
+        "browser_hover",
+        "browser_close",
+        "browser_navigate",
+        "browser_evaluate",
+        "browser_wait_for",
+        "browser_console_messages"
+      ]
+    }
+  }
+}
