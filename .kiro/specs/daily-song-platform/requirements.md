@@ -45,13 +45,15 @@ TuneTools is a web application that generates personalized daily songs based on 
 
 #### Acceptance Criteria
 
-1. WHEN a user completes signup THEN the System SHALL create a new user account in Supabase
-2. WHEN a user first logs in THEN the System SHALL redirect them to the onboarding flow
-3. WHEN the onboarding starts THEN the System SHALL prompt the user to select news categories and preferences
-4. WHEN a user selects preferences THEN the System SHALL store category weights with 70% for preferred categories and 30% for general news
-5. WHEN category preferences are saved THEN the System SHALL prompt the user to grant calendar access permissions
-6. WHEN a user grants calendar access THEN the System SHALL store the calendar integration credentials securely
-7. WHEN a user completes onboarding THEN the System SHALL redirect them to the main dashboard
+1. WHEN a user completes signup THEN the System SHALL create a new user account in Supabase using the Supabase JavaScript SDK
+2. WHEN a user authenticates THEN the System SHALL store the session in browser localStorage
+3. WHEN a user first logs in THEN the System SHALL redirect them to the onboarding flow
+4. WHEN the onboarding starts THEN the System SHALL prompt the user to select news categories and preferences
+5. WHEN a user selects preferences THEN the System SHALL store category weights with 70% for preferred categories and 30% for general news
+6. WHEN category preferences are saved THEN the System SHALL prompt the user to grant calendar access permissions
+7. WHEN a user grants calendar access THEN the System SHALL store the calendar integration credentials securely
+8. WHEN a user completes onboarding THEN the System SHALL redirect them to the main dashboard
+9. WHEN the application loads THEN the System SHALL check for an existing session in localStorage and restore authentication state
 
 ### Requirement 3
 

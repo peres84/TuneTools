@@ -40,24 +40,20 @@
   - Test Album model validation
   - _Requirements: Data Models_
 
-- [ ] 4. Implement authentication endpoints
-  - Create `/api/auth/signup` endpoint using Supabase Auth
-  - Create `/api/auth/login` endpoint
-  - Create `/api/auth/logout` endpoint
-  - Create `/api/auth/session` endpoint for session validation
-  - Implement JWT token validation middleware
-  - _Requirements: 2.1_
+- [ ] 4. Implement JWT token validation middleware for backend
+  - Create authentication middleware to validate Supabase JWT tokens
+  - Extract user_id from validated tokens
+  - Implement token verification using Supabase Admin API
+  - Apply middleware to all protected endpoints
+  - Handle token expiration and refresh
+  - _Requirements: Backend Security_
 
-- [ ]* 4.1 Write property test for user account creation
-  - **Property 1: User Account Creation**
-  - **Validates: Requirements 2.1**
-
-- [ ]* 4.2 Write unit tests for authentication endpoints
-  - Test signup with valid credentials
-  - Test login with valid credentials
-  - Test login with invalid credentials
-  - Test session validation
-  - _Requirements: 2.1_
+- [ ]* 4.1 Write unit tests for JWT validation middleware
+  - Test valid token extraction
+  - Test invalid token rejection
+  - Test expired token handling
+  - Test missing token handling
+  - _Requirements: Backend Security_
 
 - [ ] 5. Implement user preferences management
   - Create `/api/user/preferences` GET endpoint
@@ -276,8 +272,11 @@
   - Set up React Router for navigation
   - Set up TanStack Query for data fetching
   - Set up Zustand for state management
-  - Initialize Supabase JS client
-  - Create folder structure: `components/`, `pages/`, `hooks/`, `services/`, `styles/`, `utils/`
+  - Install @supabase/supabase-js package
+  - Initialize Supabase JS client with project URL and anon key
+  - Configure Supabase client to use localStorage for session persistence
+  - Create folder structure: `components/`, `pages/`, `hooks/`, `services/`, `styles/`, `utils/`, `contexts/`
+  - Create API service utilities that include JWT token in request headers
   - _Requirements: Frontend Architecture_
 
 - [ ] 17. Implement theme provider and brand colors
@@ -307,19 +306,32 @@
   - Implement responsive design
   - _Requirements: 1.1, 1.2, 1.4, 1.6_
 
-- [ ] 19. Implement authentication components
-  - Create AuthForm component for signup/login
-  - Integrate Supabase Auth
-  - Implement email/password authentication
+- [ ] 19. Implement authentication context and components
+  - Create AuthContext provider using Supabase JS SDK
+  - Initialize Supabase client with project URL and anon key
+  - Implement signUp method using supabase.auth.signUp()
+  - Implement signIn method using supabase.auth.signInWithPassword()
+  - Implement signOut method using supabase.auth.signOut()
+  - Set up auth state listener with supabase.auth.onAuthStateChange()
+  - Implement session restoration on app load using supabase.auth.getSession()
+  - Create AuthForm component for signup/login UI
   - Add form validation
   - Handle authentication errors
   - Redirect to onboarding after first signup
   - Redirect to dashboard after login
-  - _Requirements: 2.1, 2.2_
+  - _Requirements: 2.1, 2.2, 2.3, 2.9_
 
-- [ ]* 19.1 Write property test for first login onboarding redirect
-  - **Property 2: First Login Onboarding Redirect**
+- [ ]* 19.1 Write property test for session storage in localStorage
+  - **Property 1: Session Storage in localStorage**
   - **Validates: Requirements 2.2**
+
+- [ ]* 19.2 Write property test for session restoration on app load
+  - **Property 2: Session Restoration on App Load**
+  - **Validates: Requirements 2.9**
+
+- [ ]* 19.3 Write property test for first login onboarding redirect
+  - **Property 3: First Login Onboarding Redirect**
+  - **Validates: Requirements 2.3**
 
 - [ ] 20. Implement onboarding flow components
   - Create OnboardingStep1 component for preferences
@@ -330,9 +342,10 @@
   - Create OnboardingStep2 component for calendar integration
   - Implement Google Calendar OAuth flow
   - Add skip option for calendar integration
-  - Save preferences to backend
+  - Save preferences to backend with JWT token in Authorization header
+  - Update user profile onboarding_completed flag
   - Redirect to dashboard after completion
-  - _Requirements: 2.3, 2.4, 2.5, 2.6, 2.7_
+  - _Requirements: 2.4, 2.5, 2.6, 2.7, 2.8_
 
 - [ ] 21. Implement dashboard layout component
   - Create DashboardLayout component with sidebar

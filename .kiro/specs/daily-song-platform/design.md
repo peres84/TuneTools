@@ -4,15 +4,18 @@
 
 TuneTools is a full-stack web application that transforms daily news, weather, and calendar activities into personalized songs. The system follows a microservices-inspired architecture with a FastAPI backend, React frontend, Supabase for data persistence and authentication, and integrates with multiple external services (news APIs, weather APIs, calendar APIs, LLM services, and the RunPod YuE music generation endpoint).
 
+**Authentication Architecture:** Authentication is handled entirely in the frontend using the Supabase JavaScript SDK (@supabase/supabase-js). User sessions are automatically persisted in browser localStorage by the Supabase SDK. The backend validates JWT tokens from Supabase Auth in request headers for all protected endpoints. This approach simplifies the authentication flow and leverages Supabase's built-in session management.
+
 The application flow:
-1. User authenticates and completes onboarding (preferences, calendar integration)
-2. System aggregates contextual data (news 70/30 weighted by preferences, weather, calendar)
-3. LLM analyzes context and generates song lyrics + genre tags
-4. Weekly album artwork is generated once per week and stored
-5. RunPod endpoint generates audio using YuE model
-6. Song and metadata are stored in Supabase
-7. User views/plays song in interactive UI with rotating vinyl disk
-8. Songs are shareable via unique URLs
+1. User authenticates via frontend (Supabase JS SDK) and completes onboarding (preferences, calendar integration)
+2. Frontend stores session in localStorage automatically
+3. System aggregates contextual data (news 70/30 weighted by preferences, weather, calendar)
+4. LLM analyzes context and generates song lyrics + genre tags
+5. Weekly album artwork is generated once per week and stored
+6. RunPod endpoint generates audio using YuE model
+7. Song and metadata are stored in Supabase
+8. User views/plays song in interactive UI with rotating vinyl disk
+9. Songs are shareable via unique URLs
 
 ## Project Structure
 
@@ -62,18 +65,18 @@ The application flow:
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Frontend (React)                         │
 │  - Landing Page                                                  │
-│  - Authentication (Supabase Auth)                                │
+│  - Authentication (Supabase JS SDK - client-side)                │
+│  - Session Management (localStorage)                             │
 │  - Onboarding Flow                                               │
 │  - Dashboard (News, Calendar, Songs, Settings, Profile)          │
 │  - Song Player Page (animated background, rotating vinyl)        │
 │  - Theme Provider (Dark/Light)                                   │
 └────────────────────────┬────────────────────────────────────────┘
-                         │ REST API
+                         │ REST API (with JWT auth)
 ┌────────────────────────▼────────────────────────────────────────┐
 │                      Backend (FastAPI)                           │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │ API Routes                                                │   │
-│  │  - /auth/* (signup, login, session)                      │   │
 │  │  - /user/* (preferences, profile)                        │   │
 │  │  - /news/* (fetch aggregated news)                       │   │
 │  │  - /weather/* (fetch weather data)                       │   │
@@ -117,7 +120,8 @@ The application flow:
 - Tailwind CSS for styling
 - Framer Motion for animations
 - Zustand for state management
-- Supabase JS client for auth and data
+- Supabase JS client (@supabase/supabase-js) for authentication and data
+- localStorage for session persistence
 
 **Backend:**
 - FastAPI (Python 3.11+)
@@ -162,9 +166,29 @@ interface AuthFormProps {
   onError: (error: Error) => void;
 }
 
-// Uses Supabase Auth
-// Email/password authentication
-// OAuth providers (Google, optional)
+// Uses Supabase JS SDK directly in frontend
+// Email/password authentication via supabase.auth.signUp() and supabase.auth.signInWithPassword()
+// OAuth providers (Google, optional) via supabase.auth.signInWithOAuth()
+// Session automatically stored in localStorage by Supabase SDK
+// Session restoration via supabase.auth.getSession() on app load
+```
+
+#### 2a. Auth Context Provider
+```typescript
+interface AuthContextValue {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  signUp: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  isAuthenticated: boolean;
+}
+
+// Wraps app with Supabase auth state
+// Listens to auth state changes via supabase.auth.onAuthStateChange()
+// Provides authentication methods to all components
+// Handles session persistence automatically via Supabase SDK
 ```
 
 #### 3. Onboarding Flow Components
@@ -287,23 +311,57 @@ interface ThemeContextValue {
 // - TuneTools brand color adaptation
 ```
 
+#### 9. API Service Utilities
+```typescript
+interface ApiClientConfig {
+  baseUrl: string;
+  supabaseClient: SupabaseClient;
+}
+
+class ApiClient {
+  private baseUrl: string;
+  private supabase: SupabaseClient;
+
+  constructor(config: ApiClientConfig);
+
+  /**
+   * Makes authenticated API request with JWT token
+   * Automatically includes Authorization header with current session token
+   */
+  async request<T>(
+    endpoint: string,
+    options?: RequestInit
+  ): Promise<T>;
+
+  /**
+   * Gets current session token from Supabase
+   */
+  private async getAuthToken(): Promise<string | null>;
+}
+
+// Features:
+// - Automatic JWT token inclusion in all requests
+// - Token refresh handling
+// - Error handling for 401 responses
+// - Type-safe request/response handling
+```
+
 ### Backend API Endpoints
 
-#### Authentication Endpoints
+**Note:** Authentication is handled entirely in the frontend using Supabase JS SDK. The backend validates JWT tokens from Supabase Auth in request headers.
+
+#### Authentication Middleware
 ```python
-POST /api/auth/signup
-Request: { email: str, password: str }
-Response: { user: User, session: Session }
+# All protected endpoints require Authorization header with JWT token
+# Middleware validates token with Supabase and extracts user_id
+# Token format: "Bearer <jwt_token>"
 
-POST /api/auth/login
-Request: { email: str, password: str }
-Response: { user: User, session: Session }
-
-POST /api/auth/logout
-Response: { success: bool }
-
-GET /api/auth/session
-Response: { user: User | null }
+async def verify_supabase_token(authorization: str) -> str:
+    """
+    Validates JWT token from Supabase Auth
+    Returns user_id if valid, raises 401 if invalid
+    """
+    pass
 ```
 
 #### User Endpoints
@@ -786,4 +844,18 @@ class SongGenerationResponse(BaseModel):
 ## Correctness Properties
 
 *A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+
+### Authentication Properties
+
+Property 1: Session Storage in localStorage
+*For any* successful authentication (signup or login), the Supabase SDK SHALL store the session in browser localStorage automatically
+**Validates: Requirements 2.2**
+
+Property 2: Session Restoration on App Load
+*For any* application load with an existing session in localStorage, the Supabase SDK SHALL restore the authentication state and provide the user object
+**Validates: Requirements 2.9**
+
+Property 3: First Login Onboarding Redirect
+*For any* user who has just completed signup and has not completed onboarding, the System SHALL redirect them to the onboarding flow
+**Validates: Requirements 2.3**
 
