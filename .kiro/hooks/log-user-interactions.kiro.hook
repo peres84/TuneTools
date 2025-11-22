@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Log User Interactions",
+  "description": "After every user interaction, this hook saves the date/time, user prompt, and a brief outcome description (max 3 lines) to /docs/vipe_coding.txt to maintain a complete session history",
+  "version": "1",
+  "when": {
+    "type": "agentEnd"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Log this interaction to /docs/vipe_coding.txt with the following format:\n- Current date and time\n- The user's prompt/request\n- A brief outcome description (maximum 3 lines) summarizing what was accomplished\n\nAppend this information to the file, maintaining chronological order."
+  }
+}
