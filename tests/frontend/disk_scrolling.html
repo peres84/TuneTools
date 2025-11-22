@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Playlist - Disk Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(45deg, #ee7752 0%, #e73c7e 25%, #23a6d5 50%, #23d5ab 75%, #ee7752 100%);
+            background-size: 400% 400%;
+            animation: waterGradient 12s ease infinite;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes waterGradient {
+            0% {
+                background-position: 0% 50%;
+            }
+            25% {
+                background-position: 50% 100%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            75% {
+                background-position: 50% 0%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Animated water waves overlay - Layer 1 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+                linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            background-size: 200% 200%, 200% 200%, 300% 100%;
+            animation: wave1 8s ease-in-out infinite, move1 10s linear infinite;
+            pointer-events: none;
+        }
+
+        /* Animated water waves overlay - Layer 2 */
+        body::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 60% 30%, rgba(35, 166, 213, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 40% 70%, rgba(238, 119, 82, 0.3) 0%, transparent 40%),
+                linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            background-size: 250% 250%, 250% 250%, 100% 300%;
+            animation: wave2 10s ease-in-out infinite reverse, move2 8s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes wave1 {
+            0%, 100% {
+                background-position: 0% 0%, 100% 100%, 0% 50%;
+            }
+            50% {
+                background-position: 100% 100%, 0% 0%, 100% 50%;
+            }
+        }
+
+        @keyframes wave2 {
+            0%, 100% {
+                background-position: 100% 0%, 0% 100%, 50% 0%;
+            }
+            50% {
+                background-position: 0% 100%, 100% 0%, 50% 100%;
+            }
+        }
+
+        @keyframes move1 {
+            0% {
+                transform: translateX(0) translateY(0);
+            }
+            100% {
+                transform: translateX(50px) translateY(-50px);
+            }
+        }
+
+        @keyframes move2 {
+            0% {
+                transform: translateX(0) translateY(0) rotate(0deg);
+            }
+            100% {
+                transform: translateX(-30px) translateY(30px) rotate(5deg);
+            }
+        }
+
+        .player-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .disk-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .disk {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+            object-fit: cover;
+        }
+
+        .disk.spinning {
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .song-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .song-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .song-artist {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .share-icons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .share-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .share-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.5);
+        }
+
+        .share-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .play-pause-btn {
+            width: 80px;
+            height: 80px;
+            font-size: 32px;
+        }
+
+        .progress-container {
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .volume-icon {
+            font-size: 20px;
+            color: #666;
+        }
+
+        .volume-slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <div class="disk-container">
+            <img src="../../images/logo-disk.png" alt="Disk" class="disk" id="disk">
+        </div>
+
+        <div class="song-info">
+            <div class="song-title">Uplifting Female Indie Pop</div>
+            <div class="song-artist">Bright Vocal Electronic</div>
+
+            <div class="share-icons">
+                <button class="share-btn" id="shareTwitter" title="Share on Twitter">𝕏</button>
+                <button class="share-btn" id="shareFacebook" title="Share on Facebook">f</button>
+                <button class="share-btn" id="shareWhatsApp" title="Share on WhatsApp">⋮</button>
+                <button class="share-btn" id="shareCopy" title="Copy Link">🔗</button>
+            </div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar">
+                <div class="progress" id="progress"></div>
+            </div>
+            <div class="time-info">
+                <span id="currentTime">0:00</span>
+                <span id="duration">0:00</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="prevBtn" title="Previous">⏮</button>
+            <button class="control-btn play-pause-btn" id="playPauseBtn" title="Play/Pause">▶</button>
+            <button class="control-btn" id="nextBtn" title="Next">⏭</button>
+        </div>
+
+        <div class="volume-container">
+            <span class="volume-icon">🔊</span>
+            <input type="range" min="0" max="100" value="70" class="volume-slider" id="volumeSlider">
+        </div>
+
+        <audio id="audio" preload="metadata">
+            <source src="../runpod_severless_ep/uplifting-female-indie-pop-bright-vocal-electronic_tp0@93_T1@0_rp1@1_maxtk2500_cd6b29fa-f538-4d38-a207-d63bb42c3be0_mixed.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+
+    <script>
+        const audio = document.getElementById('audio');
+        const disk = document.getElementById('disk');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progress = document.getElementById('progress');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+        const volumeSlider = document.getElementById('volumeSlider');
+
+        // Share buttons
+        const shareTwitter = document.getElementById('shareTwitter');
+        const shareFacebook = document.getElementById('shareFacebook');
+        const shareWhatsApp = document.getElementById('shareWhatsApp');
+        const shareCopy = document.getElementById('shareCopy');
+
+        // Set initial volume
+        audio.volume = volumeSlider.value / 100;
+
+        // Play/Pause functionality
+        playPauseBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+                playPauseBtn.textContent = '⏸';
+                disk.classList.add('spinning');
+            } else {
+                audio.pause();
+                playPauseBtn.textContent = '▶';
+                disk.classList.remove('spinning');
+            }
+        });
+
+        // Update progress bar
+        audio.addEventListener('timeupdate', () => {
+            const progressPercent = (audio.currentTime / audio.duration) * 100;
+            progress.style.width = `${progressPercent}%`;
+            currentTimeEl.textContent = formatTime(audio.currentTime);
+        });
+
+        // Set duration when metadata is loaded
+        audio.addEventListener('loadedmetadata', () => {
+            durationEl.textContent = formatTime(audio.duration);
+        });
+
+        // Seek functionality
+        progressBar.addEventListener('click', (e) => {
+            const rect = progressBar.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const width = rect.width;
+            const percentage = clickX / width;
+            audio.currentTime = percentage * audio.duration;
+        });
+
+        // Volume control
+        volumeSlider.addEventListener('input', (e) => {
+            audio.volume = e.target.value / 100;
+        });
+
+        // When song ends
+        audio.addEventListener('ended', () => {
+            playPauseBtn.textContent = '▶';
+            disk.classList.remove('spinning');
+        });
+
+        // Previous/Next buttons (placeholders for playlist functionality)
+        prevBtn.addEventListener('click', () => {
+            audio.currentTime = 0;
+        });
+
+        nextBtn.addEventListener('click', () => {
+            // Placeholder for next song
+            audio.currentTime = 0;
+        });
+
+        // Share functionality
+        const shareData = {
+            title: 'Uplifting Female Indie Pop',
+            text: 'Check out this amazing track: Uplifting Female Indie Pop - Bright Vocal Electronic',
+            url: window.location.href
+        };
+
+        shareTwitter.addEventListener('click', () => {
+            const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareData.text)}&url=${encodeURIComponent(shareData.url)}`;
+            window.open(twitterUrl, '_blank', 'width=600,height=400');
+        });
+
+        shareFacebook.addEventListener('click', () => {
+            const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`;
+            window.open(facebookUrl, '_blank', 'width=600,height=400');
+        });
+
+        shareWhatsApp.addEventListener('click', () => {
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareData.text + ' ' + shareData.url)}`;
+            window.open(whatsappUrl, '_blank');
+        });
+
+        shareCopy.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(shareData.url);
+                shareCopy.textContent = '✓';
+                setTimeout(() => {
+                    shareCopy.textContent = '🔗';
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy link');
+            }
+        });
+
+        // Format time helper function
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>
