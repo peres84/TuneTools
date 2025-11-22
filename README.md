@@ -6,6 +6,7 @@ TuneTools is a prototype pipeline that:
 
 - extracts context (news, weather, calendar)
 - generates a music specification and lyrics via an LLM
+- generate image for the song
 - formats inputs for the YuE music pipeline
 - runs YuE inference (stage1 -> stage2 -> upsampler) to produce audio
 
@@ -39,6 +40,7 @@ This project was created for hackathon use (Kiroween / Frankenstein category) �
    - structured lyrics (verse/chorus)
 3. Save `genre.txt` and `lyrics.txt` and run the YuE inference pipeline to synthesize audio.
 4. Return the generated audio (Base64) from the serverless handler.
+5. generate image using gemini banana for the song.
 
 **Running locally (developer)**
 
@@ -61,57 +63,52 @@ Note: First run will download models (large) when the handler is called.
 - The handler located at `tests/runpod_severless_ep/handler.py` lazily downloads models to `/runpod-volume` (if available) or `/tmp/models` and then runs `infer.py` inside `/app/YuE/inference`.
 - The handler encodes audio to Base64 and returns it in the response. See the example client in `test_endpoint.py` for usage.
 
-**Kiroween / Hackathon Submission (Important)**
-🎃 Welcome to Kiroween 👻
+# TuneTools
 
-This project will be submitted to the Kiroween hackathon (Frankenstein category). To comply with Kiroween rules and maximize scores, follow these requirements when preparing your submission:
+**Project**: TuneTools — generate short personalized songs from news, weather, calendar events, and user preferences.
 
-- **Include a `/.kiro` directory at the root of the repository.** This directory should contain any Kiro specs, steering docs, hooks, or other Kiro artifacts you used while developing the project. Do NOT add `/.kiro` or its subfolders to `.gitignore`.
-- **Upload Kiro files**: Provide your `.kiro` folder, steering documents, example vibe-coding transcripts, and any hook code you used for automation. Judges will look for evidence of Kiro usage (vibe coding, specs, hooks, MCP usage).
-- **Category:** Frankenstein — stitch together LLM prompts, YuE models, RunPod serverless, and calendar/news/weather APIs.
-- **What to submit:** A public repo URL (with an OSI-approved license), a live/demo URL (if available), and a 3-minute demo video on YouTube/Vimeo (public). Include a README section describing how you used Kiro (vibe coding transcripts, hooks, specs, steering docs).
+**Overview**
 
-Suggested structure inside repo for submission:
+- **Purpose**: Convert daily context into short, shareable songs.
+- **Inputs**: News headlines, weather, Google Calendar events, user preferences.
+- **Core components**: LLM-based spec & lyrics generator, YuE inference pipeline glue, serverless RunPod handler, optional Gemini artwork.
 
-- `/.kiro/` — Kiro specs, steering docs, hooks, or transcripts
-- `docs/kiro/` — textual explanation of how Kiro was used (optional)
-- `demo/` — short demo script or recorded outputs
+**Repository Layout**
 
-Failure to include `/.kiro` or including it in `.gitignore` may disqualify the submission.
+- **`README.md`**: Project overview and instructions.
+- **`docs/`**: Integration notes (calendar API, prompts, models).
+- **`scripts/generate_image.py`**: Template to generate cover artwork via Gemini (image-generation placeholder).
+- **`tests/runpod_severless_ep/handler.py`**: RunPod serverless handler that downloads models and runs YuE.
+- **`tests/runpod_severless_ep/test_endpoint.py`**: Example client for the RunPod endpoint.
+- **`tests/news_test.py`**: Small helper for news-related tests.
 
-**Example README Submission Checklist (what judges expect)**
+**Quick Start (developer)**
 
-- Public repo with license
-- `/.kiro` present and not ignored
-- Short demo video link (3 minutes)
-- Clear explanation of which Kiroween category (Frankenstein) and how Kiro was used (vibe coding, hooks, steering, MCP)
+- **Create venv**: `python -m venv .venv`
+- **Activate (PowerShell)**: `.\.venv\Scripts\Activate.ps1`
+- **Install deps**: `pip install -r requirements.txt` (add `requirements.txt` for reproducibility)
+- **Run example client** (set env vars first): `python tests/runpod_severless_ep/test_endpoint.py`
 
-**Development notes & next steps**
+Notes: the first generation run will download large YuE models if they are not cached.
 
-- Add a `requirements.txt` or `pyproject.toml` for reproducible installs.
-- Add a short script to generate `genre.txt` and `lyrics.txt` from sample inputs for local testing.
-- Add a small CI job (optional) to lint and run the small tests in `tests/`.
+**How it works (high level)**
 
-If you want, I can:
+1. Gather context (weather, calendar, news).
+2. Use an LLM to produce a 5-component genre tag and structured lyrics (verse/chorus).
+3. Save `genre.txt` and `lyrics.txt` and run the YuE inference pipeline to synthesize audio.
+4. The handler encodes audio as Base64 and returns it in the response.
 
-- run the small Python tests in `tests/` now, or
-- scaffold a `/.kiro` example with a simple spec and one vibe-coding transcript for submission.
+**RunPod Handler**
 
----
+- **Location**: `tests/runpod_severless_ep/handler.py`.
+- **Behavior**: Lazily downloads models to `/runpod-volume` or `/tmp/models`, runs `infer.py` under `/app/YuE/inference`, and returns Base64-encoded audio.
+- **Client example**: `tests/runpod_severless_ep/test_endpoint.py` demonstrates calling the handler and saving the result locally.
 
-Last updated: Nov 22, 2025
+**Image Generation (Gemini)**
 
-**Image generation (Gemini)**
-
-You can generate cover artwork for each generated song using Gemini (Google's image models). Below is a short workflow and a template script included in `scripts/generate_image.py`.
-
-Quick steps:
-
-- Set your Gemini API key in the environment variable `GEMINI_API_KEY` or `GOOGLE_API_KEY`.
-- Create a short prompt from the song's `title`, `genre` tags, and a lyrics excerpt.
-- Run `scripts/generate_image.py` with `--title`, `--genre`, and `--lyrics_file` to produce an image file.
-
-Example (PowerShell):
+- **Script**: `scripts/generate_image.py` (template).
+- **Env**: set `GEMINI_API_KEY` or `GOOGLE_API_KEY` before running.
+- **Example (PowerShell)**:
 
 ```powershell
 setx GEMINI_API_KEY "your_api_key_here"
@@ -119,9 +116,23 @@ setx GEMINI_API_KEY "your_api_key_here"
 python scripts\generate_image.py --title "Morning Anthem" --genre "uplifting female indie-pop bright vocal" --lyrics_file sample_lyrics.txt --out cover.png
 ```
 
-Notes:
+- **Notes**: `generate_image.py` contains a `NotImplementedError` placeholder for the actual Gemini call. Replace `generate_image_from_gemini` with your preferred Gemini SDK/REST call and credentials.
 
-- The included `scripts/generate_image.py` is a template and contains a `NotImplementedError` placeholder for the actual Gemini call. Replace the `generate_image_from_gemini` function with the SDK or REST call you prefer (for example `google.generativeai` client).
-- Prompt tips: include the title, a 2–4 line lyric excerpt, genre tags, and art direction (color palette, lighting, 1:1 aspect, style). Keep prompts focused and experiment with style tokens like "cinematic", "photo-real", "illustration", "film grain".
+**Kiroween / Hackathon Submission (Frankenstein category)**
 
-If you want, I can implement the Gemini call in `scripts/generate_image.py` for a specific client (provide the preferred SDK or API endpoint) and run a quick local test (you'll need to provide a valid `GEMINI_API_KEY`).
+- **Requirement**: Include a `/.kiro` directory at the repository root containing Kiro specs, steering docs, vibe-coding transcripts, and hook code. Do NOT add `/.kiro` or its subfolders to `.gitignore`.
+- **What to submit**:
+  - Public repo URL with OSI-approved license
+  - Live/demo URL (if available)
+  - A 3-minute public demo video (YouTube/Vimeo)
+  - Identify category (Frankenstein) and list Kiro features used (vibe coding, hooks, steering docs, MCP)
+- **Suggested repo layout for submission**:
+  - `/.kiro/` — Kiro specs and artifacts
+  - `docs/kiro/` — written explanation of Kiro usage
+  - `demo/` — demo scripts or generated outputs
+
+Failure to include `/.kiro` may disqualify the submission.
+
+---
+
+**Last updated**: Nov 22, 2025
