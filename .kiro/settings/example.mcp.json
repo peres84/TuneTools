@@ -12,7 +12,7 @@
         "--access-token",
         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
       ],
-      "disabled": true
+      "disabled": false
     },
     "fetch": {
       "command": "uvx",
