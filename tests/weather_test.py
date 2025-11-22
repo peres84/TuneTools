@@ -1,0 +1,1 @@
+# Use this file to create test cases for the weather endpoint

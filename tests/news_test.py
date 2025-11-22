@@ -1,0 +1,1 @@
+# file to check the endpoint to retrieve news articles
