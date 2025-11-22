@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Page Design & Responsiveness Check",
+  "description": "Automatically validates that completed pages are responsive, well-structured, provide great user experience, and properly use the branding colors (#326273 primary, #5C9EAD secondary, #E39774 accent, #EEEEEE light backgrounds) using Playwright MCP for testing",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.html",
+      "*.htm",
+      "tests/frontend/*.html"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A page has been edited. Please use Playwright MCP to check the following:\n\n1. **Responsiveness**: Test the page at multiple viewport sizes (mobile 375px, tablet 768px, desktop 1920px) to ensure proper layout adaptation\n2. **User Experience**: Verify intuitive navigation, readable text, proper spacing, and interactive element feedback\n3. **Design Structure**: Check for semantic HTML, proper heading hierarchy, accessible markup, and logical content flow\n4. **Branding Colors**: Validate proper usage of:\n   - Primary color: #326273\n   - Secondary color: #5C9EAD\n   - Accent color: #E39774\n   - Light backgrounds: #EEEEEE\n   \nUse Playwright to:\n- Take screenshots at different viewport sizes\n- Check computed styles for color values\n- Test interactive elements (buttons, links, forms)\n- Verify text contrast ratios for accessibility\n- Validate layout doesn't break at various screen sizes\n\nProvide a detailed report with specific issues found and recommendations for improvement."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Theme Accessibility Check",
+  "description": "When any view file is created in the frontend, automatically check that both dark and light theme modes are properly implemented and accessible using Playwright MCP for thorough testing",
+  "version": "1",
+  "when": {
+    "type": "fileCreated",
+    "patterns": [
+      "tests/frontend/*.html",
+      "frontend/*.html",
+      "*.html"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A new frontend view has been created. Please use the Playwright MCP server to:\n1. Load the newly created view file in a browser\n2. Check if dark theme styling is available and properly implemented\n3. Check if light theme styling is available and properly implemented\n4. Verify theme toggle functionality works correctly (if applicable)\n5. Test that all UI elements are visible and accessible in both themes\n6. Check color contrast ratios meet accessibility standards in both modes\n7. Report any issues found with theme implementation\n\nProvide a detailed report of the theme accessibility check results."
+  }
+}

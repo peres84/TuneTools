@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Frontend DevTools Debugger",
+  "description": "Monitors frontend files for changes and compilation issues. When problems are detected, uses Chrome DevTools to analyze compilation errors, inspect forms, debug network requests, and solve frontend issues automatically.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "tests/frontend/*.html",
+      "*.js",
+      "*.css",
+      "*.jsx",
+      "*.tsx",
+      "*.vue",
+      "*.svelte"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A frontend file has been modified. Please analyze the changes and check for any compilation errors, runtime issues, or problems. Use Chrome DevTools to:\n1. Check the browser console for compilation errors and runtime exceptions\n2. Inspect network requests for failed API calls or resource loading issues\n3. Analyze form validation and submission problems\n4. Debug JavaScript execution and identify breaking changes\n5. Verify CSS rendering and layout issues\n6. Test the functionality and fix any issues found\n\nProvide a detailed analysis of any problems discovered and implement fixes as needed."
+  }
+}
