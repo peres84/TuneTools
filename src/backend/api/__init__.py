@@ -1,7 +1,6 @@
 """
 API routes for TuneTools backend
 """
-# TODO: Import routers as they are created
-# from . import user, songs, albums, share
+from . import user
 
-__all__ = []
+__all__ = ["user"]
