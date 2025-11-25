@@ -2,13 +2,16 @@
 TuneTools FastAPI Backend
 Main application entry point
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
 # Load environment variables
 load_dotenv()
+
+# Import authentication dependencies
+from utils.middleware import get_current_user
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -54,6 +57,21 @@ async def health_check():
             "supabase": "ok",
             "runpod": "ok",
         }
+    }
+
+
+@app.get("/protected-example")
+async def protected_example(user_id: str = Depends(get_current_user)):
+    """
+    Example protected endpoint requiring authentication
+    
+    This demonstrates how to use the authentication middleware.
+    The user_id is automatically extracted from the JWT token.
+    """
+    return {
+        "message": "This is a protected endpoint",
+        "user_id": user_id,
+        "authenticated": True
     }
 
 
