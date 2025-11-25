@@ -18,13 +18,37 @@ This project was created for hackathon use (Kiroween / Frankenstein category) �
 - **Inputs:** News articles, weather data, calendar events, user preferences
 - **Core components:** LLM-based spec/lyrics generator, YuE inference glue, RunPod-friendly handler
 
-**Repository Layout (important files)**
+**Project Structure**
 
-- `README.md`: this file
-- `docs/`: notes about calendar API, prompt guidelines, required models
+```
+TuneTools/
+├── src/
+│   ├── frontend/         # React + TypeScript frontend
+│   └── backend/          # FastAPI backend
+├── supabase/             # Database schema and migrations
+│   ├── migrations/       # SQL migration files
+│   └── config.toml       # Supabase configuration
+├── scripts/              # Utility scripts
+│   └── create_vinyl_disk.py
+├── tests/                # Test scripts
+│   ├── weather_test.py
+│   ├── news_test.py
+│   └── runpod_severless_ep/
+├── docs/                 # Documentation
+├── images/               # Project assets
+├── .env                  # Environment variables
+├── requirements.txt      # Python dependencies
+└── README.md             # This file
+```
+
+**Important Files**
+
 - `tests/runpod_severless_ep/handler.py`: RunPod handler that lazily downloads models and runs YuE
 - `tests/runpod_severless_ep/test_endpoint.py`: example client to call the RunPod endpoint
-- `tests/news_test.py`: small test helper (scan for news articles)
+- `tests/weather_test.py`: weather API integration test
+- `tests/news_test.py`: news API integration test
+- `scripts/create_vinyl_disk.py`: vinyl disk image generator
+- `docs/`: notes about calendar API, prompt guidelines, required models
 
 **Note about models**: The repo expects YuE models (stage1, stage2, upsampler). See `docs/Yue_Models.md` for recommended models and sizes.
 

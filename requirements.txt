@@ -1,4 +1,26 @@
-uv==0.9.11
-uvicorn==0.34.3
+# Core Framework
+fastapi==0.115.0
+uvicorn[standard]==0.34.3
+pydantic==2.9.0
+python-dotenv==1.0.1
+
+# Database & Storage
 supabase==2.15.1
+
+# HTTP & API Clients
+requests==2.32.3
+httpx==0.27.0
+
+# Authentication
+pyjwt==2.9.0
+
+# AI/ML Services (for future tasks)
+openai==1.51.0
+google-generativeai==0.8.0
+
+# RunPod Integration
+runpod==1.6.2
+
+# Utilities
+python-multipart==0.0.9
 redis==6.0.0
