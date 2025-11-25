@@ -7,6 +7,7 @@ recomendations
 # search by sentences 250 request/month
 
 2. https://serpapi.com/pricing
+https://serpapi.com/manage-api-key
 
 # search by keywords can retrieve top news, 50 request/day
 
