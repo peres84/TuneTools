@@ -1,6 +1,11 @@
 """
 Weather API Test Script
 Fetches current weather data using OpenWeatherMap API
+
+IMPORTANT NOTE: when implementing this API, it is necessary
+to first ask permission from the user to obtain its location,
+whether that is from coordinates (latitude and longitude) or
+by city name or zip code
 """
 import os
 import requests
