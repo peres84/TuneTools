@@ -1,0 +1,59 @@
+# Supabase Configuration
+# This file contains configuration for local Supabase development
+
+[project]
+name = "TuneTools"
+
+[api]
+# Port for the API server
+port = 54321
+# Schemas to expose in the API
+schemas = ["public", "storage"]
+# Extra search path for schemas
+extra_search_path = ["public"]
+# Maximum number of rows returned from a view, table, or stored procedure
+max_rows = 1000
+
+[db]
+# Port for the database
+port = 54322
+# Database name
+name = "postgres"
+# Major version of PostgreSQL
+major_version = 15
+
+[studio]
+# Port for Supabase Studio
+port = 54323
+
+[auth]
+# Enable email confirmations
+enable_signup = true
+# JWT expiry time in seconds
+jwt_expiry = 3600
+# Site URL for redirects
+site_url = "http://localhost:5173"
+# Additional redirect URLs
+additional_redirect_urls = ["http://localhost:3000"]
+
+[auth.email]
+# Enable email provider
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[storage]
+# File size limit in bytes (50MB)
+file_size_limit = 52428800
+# Storage backend
+backend = "file"
+
+[storage.buckets.audio_files]
+public = false
+file_size_limit = 52428800
+allowed_mime_types = ["audio/wav", "audio/mpeg", "audio/flac"]
+
+[storage.buckets.vinyl_disks]
+public = true
+file_size_limit = 10485760
+allowed_mime_types = ["image/png", "image/jpeg", "image/webp"]
