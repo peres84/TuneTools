@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../services/supabase'
 
@@ -21,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [isFirstLogin, setIsFirstLogin] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
 
   // Session restoration on app load
   useEffect(() => {
@@ -41,18 +42,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Handle first login redirect to onboarding
       if (event === 'SIGNED_IN' && session?.user) {
-        // Check if user has completed onboarding
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('onboarding_completed')
-          .eq('user_id', session.user.id)
-          .single()
+        console.log('🔐 User signed in, checking onboarding status...')
+        
+        // Don't redirect if already on onboarding or dashboard
+        if (location.pathname === '/onboarding' || location.pathname === '/dashboard') {
+          console.log('✅ Already on correct page, skipping redirect')
+          return
+        }
+        
+        try {
+          // Check if user has completed onboarding
+          const { data: profile, error } = await supabase
+            .from('user_profiles')
+            .select('onboarding_completed')
+            .eq('id', session.user.id)
+            .single()
 
-        if (!profile || !profile.onboarding_completed) {
+          if (error) {
+            console.error('Error fetching user profile:', error)
+            // If profile doesn't exist, redirect to onboarding
+            setIsFirstLogin(true)
+            console.log('➡️ Redirecting to onboarding (profile not found)')
+            navigate('/onboarding')
+          } else if (!profile || !profile.onboarding_completed) {
+            setIsFirstLogin(true)
+            console.log('➡️ Redirecting to onboarding (not completed)')
+            navigate('/onboarding')
+          } else {
+            console.log('➡️ Redirecting to dashboard (onboarding completed)')
+            navigate('/dashboard')
+          }
+        } catch (err) {
+          console.error('Error in auth state change:', err)
+          // On error, assume first login
           setIsFirstLogin(true)
           navigate('/onboarding')
-        } else {
-          navigate('/dashboard')
         }
       }
 
@@ -63,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [navigate])
+  }, [navigate, location.pathname])
 
   // Sign up method
   const signUp = async (email: string, password: string) => {
@@ -77,13 +101,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error }
       }
 
-      // Create user profile
+      // Create user profile (if trigger doesn't work)
       if (data.user) {
-        await supabase.from('user_profiles').insert({
-          user_id: data.user.id,
-          email: data.user.email,
-          onboarding_completed: false,
-        })
+        try {
+          await supabase.from('user_profiles').insert({
+            id: data.user.id,
+            onboarding_completed: false,
+          })
+        } catch (profileError) {
+          // Profile might already exist from trigger, ignore error
+          console.log('Profile creation skipped (may already exist from trigger)')
+        }
       }
 
       return { error: null }
@@ -92,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Sign in method
+  // Log in method
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
