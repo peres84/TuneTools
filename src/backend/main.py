@@ -37,16 +37,6 @@ app.add_middleware(
 )
 
 
-@app.get("/")
-async def root():
-    """Health check endpoint"""
-    return {
-        "status": "ok",
-        "message": "TuneTools API is running",
-        "version": "1.0.0"
-    }
-
-
 @app.get("/health")
 async def health_check():
     """Detailed health check"""
@@ -76,9 +66,10 @@ async def protected_example(user_id: str = Depends(get_current_user)):
 
 
 # Import API routers
-from api import user, songs, albums, share
+from api import user, songs, albums, share, root_endpoint
 
 # Include routers
+app.include_router(root_endpoint.router, tags=["root"])  # Root endpoint at /
 app.include_router(user.router, prefix="/api/user", tags=["user"])
 app.include_router(songs.router, prefix="/api/songs", tags=["songs"])
 app.include_router(albums.router, prefix="/api/albums", tags=["albums"])

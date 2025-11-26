@@ -19,7 +19,7 @@ openai==1.51.0
 google-generativeai==0.8.0
 
 # RunPod Integration
-runpod==1.6.2
+runpod==1.8.1
 
 # Utilities
 python-multipart==0.0.9
