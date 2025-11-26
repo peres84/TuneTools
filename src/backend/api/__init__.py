@@ -1,6 +1,6 @@
 """
 API routes for TuneTools backend
 """
-from . import user
+from . import user, songs
 
-__all__ = ["user"]
+__all__ = ["user", "songs"]
