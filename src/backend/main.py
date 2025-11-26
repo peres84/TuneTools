@@ -76,16 +76,13 @@ async def protected_example(user_id: str = Depends(get_current_user)):
 
 
 # Import API routers
-from api import user, songs, albums
+from api import user, songs, albums, share
 
 # Include routers
 app.include_router(user.router, prefix="/api/user", tags=["user"])
 app.include_router(songs.router, prefix="/api/songs", tags=["songs"])
 app.include_router(albums.router, prefix="/api/albums", tags=["albums"])
-
-# TODO: Add more routers as they are created
-# from api import share
-# app.include_router(share.router, prefix="/api/share", tags=["share"])
+app.include_router(share.router, prefix="/api/share", tags=["share"])
 
 
 if __name__ == "__main__":
