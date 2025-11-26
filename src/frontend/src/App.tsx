@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { supabase } from './services/supabase'
 import { useAuthStore } from './stores/authStore'
 import { ThemeToggle } from './components/ThemeToggle'
+import { LandingPage } from './pages/LandingPage'
 
 function App() {
   const { setUser, setSession, setLoading } = useAuthStore()
@@ -35,13 +36,9 @@ function App() {
       </div>
       
       <Routes>
-        <Route path="/" element={<div className="p-8 text-center">
-          <h1 className="text-4xl font-bold text-brand-primary">TuneTools</h1>
-          <p className="mt-4 text-gray-600 dark:text-gray-300">Your Daily Song Platform</p>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Theme automatically adapts to your system preference. Toggle in the top-right corner.
-          </p>
-        </div>} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/signup" element={<div className="p-8 text-center">Signup Page (Coming Soon)</div>} />
+        <Route path="/login" element={<div className="p-8 text-center">Login Page (Coming Soon)</div>} />
         {/* More routes will be added in subsequent tasks */}
       </Routes>
     </div>
