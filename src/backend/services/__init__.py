@@ -8,9 +8,7 @@ from .llm import LLMService
 from .image_generation import ImageGenerationService
 from .vinyl_disk import VinylDiskService
 from .song_generation import SongGenerationService
-
-# TODO: Import other services as they are created
-# from .album import AlbumService
+from .album import AlbumService
 
 __all__ = [
     "NewsAggregatorService",
@@ -20,4 +18,5 @@ __all__ = [
     "ImageGenerationService",
     "VinylDiskService",
     "SongGenerationService",
+    "AlbumService",
 ]
