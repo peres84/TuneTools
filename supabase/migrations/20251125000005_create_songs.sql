@@ -20,10 +20,7 @@ CREATE TABLE songs (
     
     -- Generation metadata
     generation_time_seconds FLOAT,
-    llm_provider TEXT,
-    
-    -- Ensure one song per day per user
-    UNIQUE(user_id, created_at::DATE)
+    llm_provider TEXT
 );
 
 -- Enable Row Level Security
@@ -62,7 +59,9 @@ CREATE INDEX idx_songs_user_id ON songs(user_id);
 CREATE INDEX idx_songs_album_id ON songs(album_id);
 CREATE INDEX idx_songs_share_token ON songs(share_token);
 CREATE INDEX idx_songs_created_at ON songs(created_at DESC);
-CREATE INDEX idx_songs_user_date ON songs(user_id, (created_at::DATE));
+
+-- Note: One song per day per user constraint will be enforced at application level
+-- Postgres doesn't allow date casting in unique indexes with timezone-aware timestamps
 
 -- Function to generate unique share token
 CREATE OR REPLACE FUNCTION generate_share_token()
