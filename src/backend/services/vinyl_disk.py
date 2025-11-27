@@ -48,10 +48,10 @@ class VinylDiskService:
         
         # Validate hole ratio
         if not 0 < hole_ratio < 0.5:
-            print(f"⚠️ Invalid hole ratio {hole_ratio}, using default 0.14")
+            print(f"[WARN] Invalid hole ratio {hole_ratio}, using default 0.14")
             hole_ratio = 0.14
         
-        print(f"🎵 Creating vinyl disk (size: {disk_size}px, hole: {hole_ratio:.1%})")
+        print(f"[MUSIC] Creating vinyl disk (size: {disk_size}px, hole: {hole_ratio:.1%})")
         
         # Load image
         img = Image.open(BytesIO(image_data))
@@ -87,7 +87,7 @@ class VinylDiskService:
         output_bytes = BytesIO()
         output.save(output_bytes, format='PNG')
         
-        print(f"✅ Vinyl disk created ({disk_size}x{disk_size}px, {hole_ratio:.1%} hole)")
+        print(f"[OK] Vinyl disk created ({disk_size}x{disk_size}px, {hole_ratio:.1%} hole)")
         
         return output_bytes.getvalue()
     
@@ -114,7 +114,7 @@ class VinylDiskService:
         with open(output_path, 'wb') as f:
             f.write(vinyl_data)
         
-        print(f"✅ Saved vinyl disk to {output_path}")
+        print(f"[OK] Saved vinyl disk to {output_path}")
     
     def create_from_file(
         self,

@@ -84,3 +84,4 @@ class SongResponse(BaseModel):
     song: Song
     album_name: str
     album_vinyl_disk_url: str
+    image_generation_failed: bool = False

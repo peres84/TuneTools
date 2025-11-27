@@ -75,10 +75,10 @@ class SongGenerationService:
         if progress_callback:
             progress_callback("Sending request to RunPod...")
         
-        print("🎵 Generating song with YuE...")
-        print(f"📝 Genre: {genre_tags}")
-        print(f"📝 Lyrics: {len(formatted_lyrics)} characters")
-        print("⏳ This may take 7-12 minutes...")
+        print("[MUSIC] Generating song with YuE...")
+        print(f"[WRITE] Genre: {genre_tags}")
+        print(f"[WRITE] Lyrics: {len(formatted_lyrics)} characters")
+        print("[WAIT] This may take 7-12 minutes...")
         
         start_time = time.time()
         
@@ -93,7 +93,7 @@ class SongGenerationService:
             )
             
             elapsed = time.time() - start_time
-            print(f"⏱️ Generation took {elapsed / 60:.1f} minutes")
+            print(f"[TIME] Generation took {elapsed / 60:.1f} minutes")
             
             # Parse response
             if progress_callback:
@@ -108,7 +108,7 @@ class SongGenerationService:
             
         except Exception as e:
             error_msg = f"Song generation failed: {str(e)}"
-            print(f"❌ {error_msg}")
+            print(f"[ERROR] {error_msg}")
             if progress_callback:
                 progress_callback(f"Error: {error_msg}")
             raise Exception(error_msg)
@@ -183,9 +183,9 @@ class SongGenerationService:
         filename = output.get('filename', 'song.wav')
         file_size_mb = output.get('file_size_mb', len(audio_data) / 1024 / 1024)
         
-        print(f"✅ Song generated successfully!")
-        print(f"📁 Filename: {filename}")
-        print(f"📊 Size: {file_size_mb:.2f} MB")
+        print(f"[OK] Song generated successfully!")
+        print(f"[FILE] Filename: {filename}")
+        print(f"[DATA] Size: {file_size_mb:.2f} MB")
         
         return {
             "audio_data": audio_data,
@@ -205,7 +205,7 @@ class SongGenerationService:
         with open(output_path, 'wb') as f:
             f.write(audio_data)
         
-        print(f"✅ Saved audio to {output_path}")
+        print(f"[OK] Saved audio to {output_path}")
     
     def estimate_generation_time(self, is_first_run: bool = False) -> int:
         """

@@ -49,7 +49,7 @@ class ImageGenerationService:
         week_end: str,
         song_themes: list[str],
         user_preferences: dict
-    ) -> bytes:
+    ) -> tuple[bytes, bool]:
         """
         Generate album artwork for a weekly album
         
@@ -60,7 +60,7 @@ class ImageGenerationService:
             user_preferences: User's music preferences
             
         Returns:
-            bytes: PNG image data
+            tuple: (PNG image data, image_generation_failed: bool)
         """
         # Build artwork prompt
         prompt = self._build_artwork_prompt(
@@ -73,25 +73,26 @@ class ImageGenerationService:
         # Try Gemini first (primary)
         if self.gemini_available:
             try:
-                print("🎨 Trying Gemini Imagen (primary)...")
+                print("[IMAGE] Trying Gemini Imagen (primary)...")
                 image_data = self._generate_with_gemini(prompt)
-                print("✅ Gemini generated artwork")
-                return image_data
+                print("[OK] Gemini generated artwork")
+                return image_data, False
             except Exception as e:
-                print(f"⚠️ Gemini failed: {str(e)}")
+                print(f"[WARN] Gemini failed: {str(e)}")
         
         # Fallback to OpenAI DALL-E
         if self.openai_available:
             try:
-                print("🎨 Trying OpenAI DALL-E (fallback)...")
+                print("[IMAGE] Trying OpenAI DALL-E (fallback)...")
                 image_data = self._generate_with_dalle(prompt)
-                print("✅ DALL-E generated artwork")
-                return image_data
+                print("[OK] DALL-E generated artwork")
+                return image_data, False
             except Exception as e:
-                print(f"❌ DALL-E failed: {str(e)}")
-                raise Exception("All image generation services failed")
+                print(f"[ERROR] DALL-E failed: {str(e)}")
         
-        raise Exception("No image generation service available")
+        # Final fallback: Use default placeholder image
+        print("[WARN] All image services failed, using default placeholder")
+        return self._generate_default_placeholder(), True
     
     def _build_artwork_prompt(
         self,
@@ -187,7 +188,7 @@ Visual elements:
         with open(output_path, 'wb') as f:
             f.write(image_data)
         
-        print(f"✅ Saved artwork to {output_path}")
+        print(f"[OK] Saved artwork to {output_path}")
     
     def resize_to_square(self, image_data: bytes, size: int = 1000) -> bytes:
         """
@@ -215,3 +216,42 @@ Visual elements:
         img_resized.save(output, format='PNG')
         
         return output.getvalue()
+    
+    def _generate_default_placeholder(self) -> bytes:
+        """
+        Use default asset image when all services fail
+        
+        Returns:
+            bytes: PNG image data from assets folder
+        """
+        import random
+        
+        # Get path to assets folder
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        backend_dir = os.path.dirname(current_dir)
+        assets_dir = os.path.join(backend_dir, 'assets')
+        
+        # Available fallback images
+        fallback_images = [
+            'logo-disk-vinyl-output.png',
+            'logo-disk.png'
+        ]
+        
+        # Pick a random fallback image
+        selected_image = random.choice(fallback_images)
+        image_path = os.path.join(assets_dir, selected_image)
+        
+        try:
+            with open(image_path, 'rb') as f:
+                image_data = f.read()
+            
+            print(f"[OK] Using fallback asset: {selected_image}")
+            return image_data
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to load fallback asset: {str(e)}")
+            # Last resort: create a simple colored square
+            img = Image.new('RGB', (1024, 1024), color=(138, 43, 226))
+            output = BytesIO()
+            img.save(output, format='PNG')
+            return output.getvalue()

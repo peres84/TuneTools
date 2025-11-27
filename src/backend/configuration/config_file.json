@@ -121,14 +121,14 @@
         "primary_provider": "openai",
         "fallback_provider": "gemini",
         "openai_model": "gpt-4o-mini",
-        "gemini_model": "gemini-pro",
+        "gemini_model": "gemini-2.0-flash",
         "temperature": 0.8,
         "max_tokens": 1500
     },
     "image_generation": {
         "primary_provider": "gemini",
         "fallback_provider": "openai",
-        "gemini_model": "gemini-pro",
+        "gemini_model": "gemini-2.0-flash",
         "openai_model": "dall-e-3",
         "image_size": "1024x1024"
     },

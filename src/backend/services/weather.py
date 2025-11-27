@@ -47,11 +47,11 @@ class WeatherService:
         if cache_key in self.cache:
             cached_data, cached_time = self.cache[cache_key]
             if time.time() - cached_time < self.cache_ttl:
-                print(f"✅ Returning cached weather for {city_name}")
+                print(f"[OK] Returning cached weather for {city_name}")
                 return cached_data
         
         # Fetch from API
-        print(f"🌤️  Fetching weather for {city_name}")
+        print(f"[WEATHER]  Fetching weather for {city_name}")
         
         url = f"https://api.openweathermap.org/data/2.5/weather"
         params = {
@@ -90,11 +90,11 @@ class WeatherService:
         if cache_key in self.cache:
             cached_data, cached_time = self.cache[cache_key]
             if time.time() - cached_time < self.cache_ttl:
-                print(f"✅ Returning cached weather for {latitude},{longitude}")
+                print(f"[OK] Returning cached weather for {latitude},{longitude}")
                 return cached_data
         
         # Fetch from API
-        print(f"🌤️  Fetching weather for coordinates {latitude},{longitude}")
+        print(f"[WEATHER]  Fetching weather for coordinates {latitude},{longitude}")
         
         url = f"https://api.openweathermap.org/data/2.5/weather"
         params = {
@@ -183,4 +183,4 @@ class WeatherService:
     def clear_cache(self):
         """Clear the weather cache"""
         self.cache.clear()
-        print("🗑️ Weather cache cleared")
+        print("[DELETE] Weather cache cleared")

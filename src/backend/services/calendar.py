@@ -26,7 +26,7 @@ class CalendarService:
     
     def __init__(self):
         if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-            print("⚠️ Google Calendar credentials not configured")
+            print("[WARN] Google Calendar credentials not configured")
     
     def get_authorization_url(self, user_id: str) -> str:
         """
@@ -141,7 +141,7 @@ class CalendarService:
                 # Insert new
                 supabase.table("calendar_integrations").insert(data).execute()
                 
-            print(f"✅ Stored calendar credentials for user {user_id}")
+            print(f"[OK] Stored calendar credentials for user {user_id}")
             
         except Exception as e:
             raise Exception(f"Failed to store credentials: {str(e)}")
@@ -173,7 +173,7 @@ class CalendarService:
             )
             
             if not response.data:
-                print(f"⚠️ No calendar integration found for user {user_id}")
+                print(f"[WARN] No calendar integration found for user {user_id}")
                 return []
             
             credentials = response.data
@@ -193,7 +193,7 @@ class CalendarService:
             return await self._fetch_events(access_token, days_ahead)
             
         except Exception as e:
-            print(f"❌ Failed to fetch calendar activities: {str(e)}")
+            print(f"[ERROR] Failed to fetch calendar activities: {str(e)}")
             return []
     
     async def _refresh_access_token(
@@ -300,7 +300,7 @@ class CalendarService:
                     is_all_day=is_all_day
                 ))
             
-            print(f"✅ Fetched {len(activities)} calendar activities")
+            print(f"[OK] Fetched {len(activities)} calendar activities")
             return activities
             
         except requests.exceptions.RequestException as e:
@@ -319,7 +319,7 @@ class CalendarService:
                 "user_id", user_id
             ).eq("provider", "google").execute()
             
-            print(f"✅ Revoked calendar access for user {user_id}")
+            print(f"[OK] Revoked calendar access for user {user_id}")
             
         except Exception as e:
             raise Exception(f"Failed to revoke access: {str(e)}")

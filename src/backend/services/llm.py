@@ -76,25 +76,25 @@ class LLMService:
         # Try OpenAI first
         if self.openai_available:
             try:
-                print("🤖 Trying OpenAI (primary)...")
+                print("[AI] Trying OpenAI (primary)...")
                 response = self._call_openai(prompt)
-                print("✅ OpenAI generated song content")
+                print("[OK] OpenAI generated song content")
                 return self._parse_and_validate_response(response)
             except Exception as e:
-                print(f"⚠️ OpenAI failed: {str(e)}")
+                print(f"[WARN] OpenAI failed: {str(e)}")
         
         # Fallback to Gemini
         if self.gemini_available:
             try:
-                print("🤖 Trying Gemini (fallback)...")
+                print("[AI] Trying Gemini (fallback)...")
                 response = self._call_gemini(prompt)
-                print("✅ Gemini generated song content")
+                print("[OK] Gemini generated song content")
                 return self._parse_and_validate_response(response)
             except Exception as e:
-                print(f"❌ Gemini failed: {str(e)}")
-                raise Exception("All LLM services failed")
+                print(f"[ERROR] Gemini failed: {str(e)}")
+                raise Exception("All services failed")
         
-        raise Exception("No LLM service available")
+        raise Exception("No service available")
     
     def _build_song_prompt(
         self,
@@ -232,8 +232,20 @@ Return ONLY valid JSON, no additional text."""
         - Genre tags have at least 3 components
         """
         try:
+            # Clean response (remove markdown code blocks if present)
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```"):
+                # Remove markdown code blocks
+                lines = cleaned_response.split("\n")
+                # Remove first line (```json or ```)
+                lines = lines[1:]
+                # Remove last line (```)
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                cleaned_response = "\n".join(lines).strip()
+            
             # Parse JSON
-            data = json.loads(response)
+            data = json.loads(cleaned_response)
             
             # Validate required fields
             required_fields = ["genre_tags", "lyrics", "title", "description"]
@@ -258,9 +270,9 @@ Return ONLY valid JSON, no additional text."""
             verse_section = lyrics.split("[chorus]")[0]
             verse_lines = [line for line in verse_section.split("\n") if line.strip() and not line.strip().startswith("[")]
             if len(verse_lines) > 8:
-                print(f"⚠️ Warning: Verse has {len(verse_lines)} lines (max 8 recommended)")
+                print(f"[WARN] Warning: Verse has {len(verse_lines)} lines (max 8 recommended)")
             
-            print(f"✅ Validated song content:")
+            print(f"[OK] Validated song content:")
             print(f"   Title: {data['title']}")
             print(f"   Genre: {genre_tags}")
             print(f"   Lyrics: {len(lyrics)} characters")

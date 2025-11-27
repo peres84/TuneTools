@@ -59,7 +59,7 @@ class AlbumService:
         song_themes: List[str],
         user_preferences: Dict[str, Any],
         date: Optional[datetime] = None
-    ) -> Album:
+    ) -> tuple[Album, bool]:
         """
         Get existing weekly album or create new one
         
@@ -70,7 +70,7 @@ class AlbumService:
             date: Date to get album for (default: today)
             
         Returns:
-            Album: Weekly album (existing or newly created)
+            tuple: (Album, image_generation_failed: bool)
         """
         # Calculate week boundaries
         week_start, week_end = self.get_week_boundaries(date)
@@ -82,18 +82,19 @@ class AlbumService:
         existing_album = self._get_album_by_week(user_id, week_start_date)
         
         if existing_album:
-            print(f"✅ Found existing album: {existing_album['name']}")
-            return Album(**existing_album)
+            print(f"[OK] Found existing album: {existing_album['name']}")
+            return Album(**existing_album), False
         
         # Create new album
         print("🆕 Creating new weekly album...")
-        return self._create_new_album(
+        album, image_failed = self._create_new_album(
             user_id,
             week_start,
             week_end,
             song_themes,
             user_preferences
         )
+        return album, image_failed
     
     def _get_album_by_week(self, user_id: str, week_start_date) -> Optional[Dict[str, Any]]:
         """Get album for specific week"""
@@ -120,15 +121,15 @@ class AlbumService:
         week_end: datetime,
         song_themes: List[str],
         user_preferences: Dict[str, Any]
-    ) -> Album:
+    ) -> tuple[Album, bool]:
         """Create new weekly album with artwork and vinyl disk"""
         
         # Generate album name
         album_name = f"Week of {week_start.strftime('%B %d, %Y')}"
         
         # Generate album artwork
-        print("🎨 Generating album artwork...")
-        artwork_data = self.image_service.generate_album_artwork(
+        print("[IMAGE] Generating album artwork...")
+        artwork_data, image_failed = self.image_service.generate_album_artwork(
             week_start=week_start.date().isoformat(),
             week_end=week_end.date().isoformat(),
             song_themes=song_themes,
@@ -136,7 +137,7 @@ class AlbumService:
         )
         
         # Transform to vinyl disk
-        print("🎵 Creating vinyl disk...")
+        print("[MUSIC] Creating vinyl disk...")
         vinyl_data = self.vinyl_service.create_vinyl_disk(artwork_data)
         
         # Upload vinyl disk to Supabase storage
@@ -166,9 +167,9 @@ class AlbumService:
         if not response.data:
             raise Exception("Failed to create album")
         
-        print(f"✅ Created album: {album_name}")
+        print(f"[OK] Created album: {album_name}")
         
-        return Album(**response.data[0])
+        return Album(**response.data[0]), image_failed
     
     def _upload_vinyl_disk(
         self,
@@ -203,7 +204,7 @@ class AlbumService:
             # Get public URL
             public_url = supabase.storage.from_("vinyl_disks").get_public_url(filename)
             
-            print(f"✅ Vinyl disk uploaded: {public_url}")
+            print(f"[OK] Vinyl disk uploaded: {public_url}")
             
             return public_url
             
@@ -325,7 +326,7 @@ class AlbumService:
             return album_data
             
         except Exception as e:
-            print(f"❌ Failed to get album with songs: {str(e)}")
+            print(f"[ERROR] Failed to get album with songs: {str(e)}")
             return None
     
     def list_user_albums(
@@ -359,5 +360,5 @@ class AlbumService:
             return [Album(**album) for album in response.data] if response.data else []
             
         except Exception as e:
-            print(f"❌ Failed to list albums: {str(e)}")
+            print(f"[ERROR] Failed to list albums: {str(e)}")
             return []

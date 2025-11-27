@@ -8,6 +8,17 @@
 ### @date 2025
 #############################################################################
 """
+# Fix Windows console encoding FIRST (before any other imports)
+import sys
+if sys.platform == 'win32':
+    import codecs
+    # Only wrap if not already wrapped
+    if not hasattr(sys.stdout, 'buffer'):
+        pass  # Already wrapped
+    else:
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+
 #Native imports
 import os
 from contextlib import asynccontextmanager

@@ -56,14 +56,14 @@ class NewsAggregatorService:
         if cache_key in self.cache:
             cached_articles, cached_time = self.cache[cache_key]
             if time.time() - cached_time < self.cache_ttl:
-                print(f"✅ Returning cached news ({len(cached_articles)} articles)")
+                print(f"[OK] Returning cached news ({len(cached_articles)} articles)")
                 return cached_articles
         
         # Calculate distribution
         preferred_count = int(max_articles * 0.7)  # 70%
         general_count = max_articles - preferred_count  # 30%
         
-        print(f"📰 Fetching news: {preferred_count} preferred + {general_count} general")
+        print(f"[NEWS] Fetching news: {preferred_count} preferred + {general_count} general")
         
         # Fetch preferred category news
         preferred_articles = self._fetch_with_fallback(
@@ -102,37 +102,37 @@ class NewsAggregatorService:
         # Try SerpAPI (Primary)
         if SERPAPI_KEY:
             try:
-                print("🔍 Trying SerpAPI (primary)...")
+                print("[SEARCH] Trying SerpAPI (primary)...")
                 articles = self._fetch_from_serpapi(categories, location, count)
                 if articles:
-                    print(f"✅ SerpAPI returned {len(articles)} articles")
+                    print(f"[OK] SerpAPI returned {len(articles)} articles")
                     return articles
             except Exception as e:
-                print(f"⚠️ SerpAPI failed: {str(e)}")
+                print(f"[WARN] SerpAPI failed: {str(e)}")
         
         # Try NewsAPI (Fallback 1)
         if NEWSAPI_KEY:
             try:
-                print("🔍 Trying NewsAPI (fallback 1)...")
+                print("[SEARCH] Trying NewsAPI (fallback 1)...")
                 articles = self._fetch_from_newsapi(categories, location, count)
                 if articles:
-                    print(f"✅ NewsAPI returned {len(articles)} articles")
+                    print(f"[OK] NewsAPI returned {len(articles)} articles")
                     return articles
             except Exception as e:
-                print(f"⚠️ NewsAPI failed: {str(e)}")
+                print(f"[WARN] NewsAPI failed: {str(e)}")
         
         # Try WorldNewsAPI (Fallback 2)
         if WORLDNEWS_API_KEY:
             try:
-                print("🔍 Trying WorldNewsAPI (fallback 2)...")
+                print("[SEARCH] Trying WorldNewsAPI (fallback 2)...")
                 articles = self._fetch_from_worldnews(categories, location, count)
                 if articles:
-                    print(f"✅ WorldNewsAPI returned {len(articles)} articles")
+                    print(f"[OK] WorldNewsAPI returned {len(articles)} articles")
                     return articles
             except Exception as e:
-                print(f"⚠️ WorldNewsAPI failed: {str(e)}")
+                print(f"[WARN] WorldNewsAPI failed: {str(e)}")
         
-        print("❌ All news APIs failed")
+        print("[ERROR] All news APIs failed")
         return []
     
     def _fetch_from_serpapi(
@@ -291,4 +291,4 @@ class NewsAggregatorService:
     def clear_cache(self):
         """Clear the news cache"""
         self.cache.clear()
-        print("🗑️ News cache cleared")
+        print("[DELETE] News cache cleared")
