@@ -208,7 +208,7 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
               <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate flex-1">
                 {album.name}
               </h3>
-              <div onClick={(e) => e.stopPropagation()}>
+              <div onClick={(e) => e.stopPropagation()} className="relative z-10">
                 <OptionsMenu
                   items={[
                     {

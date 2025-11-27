@@ -57,38 +57,20 @@ export function AuthForm({ mode }: AuthFormProps) {
       if (mode === 'signup') {
         console.log('📝 Starting signup process...')
         
-        // Check if email already exists
-        try {
-          console.log('🔍 Checking if email exists...')
-          const response = await fetch(
-            `${import.meta.env.VITE_API_BASE_URL}/api/user/check-email?email=${encodeURIComponent(email)}`
-          )
-          const data = await response.json()
-          console.log('📊 Email check result:', data)
-          
-          if (data.exists) {
-            if (data.confirmed) {
-              setError('This email is already registered. Please log in instead.')
-              setLoading(false)
-              return
-            } else {
-              setError('This email is already registered but not confirmed. Please check your email for the confirmation link.')
-              setLoading(false)
-              return
-            }
-          }
-        } catch (emailCheckError) {
-          console.error('❌ Email check failed:', emailCheckError)
-          // Continue with signup if check fails (don't block user)
-        }
-
-        console.log('📧 Calling signUp function...')
         const { error } = await signUp(email, password)
         console.log('📬 SignUp result:', { error })
         
         if (error) {
           console.error('❌ SignUp error:', error.message)
-          setError(error.message)
+          
+          // Provide helpful error messages
+          let errorMessage = error.message
+          
+          if (error.message.includes('already registered')) {
+            errorMessage = 'This email is already registered. Please log in instead.'
+          }
+          
+          setError(errorMessage)
         } else {
           console.log('✅ SignUp successful! Setting success state...')
           // Signup successful - show email confirmation message

@@ -70,9 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null)
       setLoading(false)
 
-      // Handle first login redirect to onboarding
-      if (event === 'SIGNED_IN' && session?.user) {
-        console.log('🔐 User signed in, checking onboarding status...')
+      // Handle first login redirect to onboarding (only for session restoration, not manual login)
+      if (event === 'SIGNED_IN' && session?.user && location.pathname === '/') {
+        console.log('🔐 Session restored, checking onboarding status...')
         
         // Check if email is confirmed
         if (!session.user.email_confirmed_at) {
@@ -81,56 +81,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
         
-        // Don't redirect if already on onboarding or dashboard
-        if (location.pathname === '/onboarding' || location.pathname === '/dashboard') {
-          console.log('✅ Already on correct page, skipping redirect')
-          return
-        }
-        
         try {
-          // Check if user has completed onboarding (use maybeSingle instead of single)
-          console.log('📊 Fetching user profile...')
-          console.log('📊 User ID:', session.user.id)
-          console.log('📊 Supabase URL:', import.meta.env.VITE_SUPABASE_URL)
-          
+          // Check if user has completed onboarding
           const { data: profile, error } = await supabase
             .from('user_profiles')
             .select('onboarding_completed')
             .eq('id', session.user.id)
             .maybeSingle()
 
-          console.log('📊 Profile result:', { profile, error })
-          console.log('📊 Profile data:', profile)
-          console.log('📊 Profile error:', error)
-
           if (error) {
             console.error('❌ Error fetching user profile:', error)
-            
-            // If table doesn't exist or RLS blocks, create profile via backend
-            if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
-              console.log('⚠️ Profile table issue, redirecting to onboarding to create profile')
-              setIsFirstLogin(true)
-              navigate('/onboarding')
-              return
-            }
-            
-            // On other errors, redirect to onboarding
+            // On error, redirect to onboarding
             setIsFirstLogin(true)
-            console.log('➡️ Redirecting to onboarding (error)')
             navigate('/onboarding')
-          } else if (!profile) {
-            // Profile doesn't exist yet - first time login
+          } else if (!profile || !profile.onboarding_completed) {
+            // Profile doesn't exist or onboarding not completed
             setIsFirstLogin(true)
-            console.log('➡️ Redirecting to onboarding (no profile)')
-            navigate('/onboarding')
-          } else if (!profile.onboarding_completed) {
-            // Profile exists but onboarding not completed
-            setIsFirstLogin(true)
-            console.log('➡️ Redirecting to onboarding (not completed)')
             navigate('/onboarding')
           } else {
             // Onboarding completed - go to dashboard
-            console.log('➡️ Redirecting to dashboard (onboarding completed)')
             navigate('/dashboard')
           }
         } catch (err) {
@@ -155,38 +124,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔐 Starting sign up process for:', email)
       
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       })
 
-      console.log('📧 Supabase signUp response:', { data, error })
+      const data = await response.json()
+      console.log('📧 Backend signup response:', data)
 
-      if (error) {
-        console.error('❌ Sign up error:', error)
-        return { error }
+      if (!response.ok) {
+        console.error('❌ Sign up error:', data.detail)
+        return { error: { message: data.detail } as AuthError }
       }
 
-      // Create user profile (if trigger doesn't work)
-      if (data.user) {
-        console.log('✅ User created:', data.user.id)
-        
-        // Don't wait for profile creation - let it happen in background
-        // The database trigger should handle this anyway
-        Promise.resolve(
-          supabase.from('user_profiles').insert({
-            id: data.user.id,
-            onboarding_completed: false,
-          })
-        ).then(({ error: profileError }) => {
-          if (profileError) {
-            console.log('⚠️ Profile creation error (may already exist):', profileError.message)
-          } else {
-            console.log('✅ User profile created')
-          }
-        }).catch(() => {
-          // Profile might already exist from trigger, ignore error
-          console.log('⚠️ Profile creation skipped (may already exist from trigger)')
+      // Set session if provided
+      if (data.session) {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
         })
       }
 
@@ -194,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null }
     } catch (error) {
       console.error('❌ Unexpected sign up error:', error)
-      return { error: error as AuthError }
+      return { error: { message: 'Network error. Please try again.' } as AuthError }
     }
   }
 
@@ -203,23 +159,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔐 Starting Log in process for:', email)
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       })
 
-      console.log('📧 Supabase signIn response:', { data, error })
+      const data = await response.json()
+      console.log('📧 Backend login response:', data)
 
-      if (error) {
-        console.error('❌ Sign in error:', error)
-      } else {
-        console.log('✅ Sign in successful')
+      if (!response.ok) {
+        console.error('❌ Sign in error:', data.detail)
+        return { error: { message: data.detail } as AuthError }
       }
 
-      return { error }
+      // Set session
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token
+      })
+
+      console.log('✅ Sign in successful')
+      console.log('📊 Onboarding completed:', data.onboarding_completed)
+
+      // Set first login flag based on onboarding status
+      setIsFirstLogin(!data.onboarding_completed)
+
+      // Navigate immediately based on backend response (don't wait for auth state change)
+      // Backend already checked onboarding status, so we can trust it
+      if (!data.onboarding_completed) {
+        console.log('➡️ Redirecting to onboarding')
+        navigate('/onboarding')
+      } else {
+        console.log('➡️ Redirecting to dashboard')
+        navigate('/dashboard')
+      }
+
+      return { error: null }
     } catch (error) {
       console.error('❌ Unexpected sign in error:', error)
-      return { error: error as AuthError }
+      return { error: { message: 'Network error. Please try again.' } as AuthError }
     }
   }
 

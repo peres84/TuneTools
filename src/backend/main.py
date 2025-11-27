@@ -119,10 +119,11 @@ async def protected_example(user_id: str = Depends(get_current_user)):
 
 
 # Import API routers
-from api import user, songs, albums, share, root_endpoint, songs_management, albums_management
+from api import user, songs, albums, share, root_endpoint, songs_management, albums_management, auth
 
 # Include routers
 app.include_router(root_endpoint.router, tags=["root"])  # Root endpoint at /
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(user.router, prefix="/api/user", tags=["user"])
 app.include_router(songs.router, prefix="/api/songs", tags=["songs"])
 app.include_router(songs_management.router, prefix="/api/songs", tags=["songs-management"])
