@@ -274,8 +274,12 @@ Return ONLY valid JSON, no additional text."""
             
             print(f"[OK] Validated song content:")
             print(f"   Title: {data['title']}")
+            print(f"   Description: {data['description']}")
             print(f"   Genre: {genre_tags}")
             print(f"   Lyrics: {len(lyrics)} characters")
+            print(f"\n--- FULL LYRICS ---")
+            print(lyrics)
+            print(f"--- END LYRICS ---\n")
             
             return data
             

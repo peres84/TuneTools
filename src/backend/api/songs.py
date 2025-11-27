@@ -80,6 +80,10 @@ async def generate_song(
         # Step 1: Aggregate context data
         log_handler.info("[DATA] Step 1: Aggregating context data...")
         context_data = await _aggregate_context_data(user_id, location)
+        log_handler.info(f"[DATA] ✓ Context aggregated:")
+        log_handler.info(f"  - Weather: {context_data.get('weather', {}).get('weather_condition', 'N/A')}, {context_data.get('weather', {}).get('temp_c', 'N/A')}°C")
+        log_handler.info(f"  - News: {len(context_data.get('news', []))} articles")
+        log_handler.info(f"  - Calendar: {len(context_data.get('calendar', []))} activities")
         
         # Step 2: Generate lyrics and genre tags
         log_handler.info("[AI] Step 2: Generating lyrics and genre tags...")
@@ -89,6 +93,11 @@ async def generate_song(
             calendar_activities=context_data.get('calendar', []),
             user_preferences=context_data.get('user_preferences', {})
         )
+        log_handler.info(f"[AI] ✓ Song content generated:")
+        log_handler.info(f"  - Title: {song_content['title']}")
+        log_handler.info(f"  - Description: {song_content['description']}")
+        log_handler.info(f"  - Genre Tags: {song_content['genre_tags']}")
+        log_handler.info(f"  - Lyrics Preview: {song_content['lyrics'][:100]}...")
         
         # Step 3: Get or create weekly album
         log_handler.info("[ALBUM] Step 3: Getting weekly album...")
@@ -97,15 +106,27 @@ async def generate_song(
             song_themes=[song_content['title']],
             user_preferences=context_data.get('user_preferences', {})
         )
+        log_handler.info(f"[ALBUM] ✓ Album ready: {album.name}")
+        log_handler.info(f"  - Album ID: {album.id}")
+        log_handler.info(f"  - Vinyl Disk URL: {album.vinyl_disk_url}")
+        log_handler.info(f"  - Image Generation Failed: {image_generation_failed}")
         
         # Step 4: Generate song audio
         log_handler.info("[AUDIO] Step 4: Generating song audio...")
         genre_tags, formatted_lyrics = llm_service.format_for_yue(song_content)
+        log_handler.info(f"[AUDIO] ✓ Formatted for YuE:")
+        log_handler.info(f"  - Genre Tags: {genre_tags}")
+        log_handler.info(f"  - Lyrics ({len(formatted_lyrics)} chars):")
+        log_handler.info(f"\n{formatted_lyrics}\n")
         
         audio_result = song_service.generate_song(
             genre_tags=genre_tags,
             lyrics=formatted_lyrics
         )
+        log_handler.info(f"[AUDIO] ✓ Audio generated:")
+        log_handler.info(f"  - Filename: {audio_result['filename']}")
+        log_handler.info(f"  - Size: {len(audio_result['audio_data']) / 1024 / 1024:.2f} MB")
+        log_handler.info(f"  - Generation Time: {audio_result['generation_time_seconds']:.1f}s")
         
         # Step 5: Store audio in Supabase storage
         log_handler.info("[SAVE] Step 5: Storing audio file...")
@@ -114,6 +135,7 @@ async def generate_song(
             audio_data=audio_result['audio_data'],
             filename=audio_result['filename']
         )
+        log_handler.info(f"[SAVE] ✓ Audio stored: {audio_url}")
         
         # Step 6: Store song metadata in database
         log_handler.info("[WRITE] Step 6: Storing song metadata...")
@@ -132,9 +154,13 @@ async def generate_song(
         )
         
         song = await _create_song_record(user_id, song_data)
+        log_handler.info(f"[WRITE] ✓ Song record created:")
+        log_handler.info(f"  - Song ID: {song.id}")
+        log_handler.info(f"  - Share Token: {song.share_token}")
         
         elapsed = time.time() - start_time
-        log_handler.info(f"[OK] Song generation complete! ({elapsed / 60:.1f} minutes)")
+        log_handler.info(f"[SUCCESS] ✓✓✓ Song generation complete! ({elapsed / 60:.1f} minutes)")
+        log_handler.info(f"[SUCCESS] Song: '{song.title}' by {user_id}")
         
         # Return song with album info
         return SongResponse(

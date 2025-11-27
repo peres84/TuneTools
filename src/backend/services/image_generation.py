@@ -136,22 +136,25 @@ Visual elements:
         """
         Generate image using Google Gemini Imagen
         
-        Note: As of now, Gemini image generation is in preview.
-        This implementation uses the Imagen API endpoint.
+        Note: Gemini's image generation API (Imagen) is currently in limited preview
+        and requires special access. For now, this raises NotImplementedError
+        to fallback to DALL-E or default assets.
+        
+        To enable Gemini image generation:
+        1. Get access to Imagen API from Google AI Studio
+        2. Install: pip install google-cloud-aiplatform
+        3. Implement using Vertex AI Imagen endpoint
         """
-        import google.generativeai as genai
+        # Gemini Imagen requires Vertex AI and special access
+        # For production, implement using:
+        # from google.cloud import aiplatform
+        # aiplatform.init(project="your-project-id", location="us-central1")
+        # model = aiplatform.ImageGenerationModel.from_pretrained("imagegeneration@006")
+        # response = model.generate_images(prompt=prompt, number_of_images=1)
         
-        genai.configure(api_key=GEMINI_API_KEY)
-        
-        # Use configured Gemini model for image generation
-        # Note: Actual Imagen API may differ - adjust as needed
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        
-        # For now, we'll use DALL-E style approach
-        # Gemini Imagen API integration would go here
         raise NotImplementedError(
-            "Gemini Imagen API integration pending. "
-            "Will fallback to DALL-E."
+            "Gemini Imagen API requires Vertex AI setup and special access. "
+            "Will fallback to DALL-E or default assets."
         )
     
     def _generate_with_dalle(self, prompt: str) -> bytes:
