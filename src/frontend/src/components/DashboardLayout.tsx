@@ -13,6 +13,7 @@ import {
   XMarkIcon,
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
+import logoDisk from '../assets/logo-disk.png'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -20,6 +21,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { user, signOut } = useAuth()
@@ -38,9 +40,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     setSidebarOpen(false)
   }
 
-  const handleSignOut = async () => {
+  const handleSignOutClick = () => {
+    setShowSignOutConfirm(true)
+  }
+
+  const handleSignOutConfirm = async () => {
+    setShowSignOutConfirm(false)
     await signOut()
     navigate('/')
+  }
+
+  const handleSignOutCancel = () => {
+    setShowSignOutConfirm(false)
   }
 
   const isActiveTab = (path: string) => {
@@ -68,15 +79,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         `}
       >
         <div className="flex flex-col h-full">
-          {/* Logo and close button */}
+          {/* Logo, theme toggle, and close button */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <h1 className="text-xl font-bold text-brand-primary">TuneTools</h1>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <XMarkIcon className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-            </button>
+            <div className="flex items-center gap-2">
+              <img src={logoDisk} alt="TuneTools Logo" className="w-8 h-8" />
+              <h1 className="text-xl font-bold text-brand-primary">TuneTools</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <XMarkIcon className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
           </div>
 
           {/* Navigation tabs */}
@@ -119,15 +136,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSignOut}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-              >
-                <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                <span>Sign Out</span>
-              </button>
-            </div>
+            <button
+              onClick={handleSignOutClick}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            >
+              <ArrowRightOnRectangleIcon className="w-5 h-5" />
+              <span>Sign Out</span>
+            </button>
           </div>
         </div>
       </aside>
@@ -142,7 +157,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             <Bars3Icon className="w-6 h-6 text-gray-600 dark:text-gray-400" />
           </button>
-          <h1 className="text-lg font-bold text-brand-primary">TuneTools</h1>
+          <div className="flex items-center gap-2">
+            <img src={logoDisk} alt="TuneTools Logo" className="w-6 h-6" />
+            <h1 className="text-lg font-bold text-brand-primary">TuneTools</h1>
+          </div>
           <div className="w-10" /> {/* Spacer for centering */}
         </header>
 
@@ -151,6 +169,34 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Sign Out Confirmation Modal */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Sign Out
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to sign out?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSignOutCancel}
+                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSignOutConfirm}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

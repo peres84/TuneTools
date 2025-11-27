@@ -8,7 +8,7 @@ export function CalendarPage() {
         
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
           <p className="text-gray-600 dark:text-gray-400">
-            Calendar integration will be implemented in a future task
+            Calendar integration will be implemented in a the future
           </p>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
+import logoDisk from '../assets/logo-disk.png'
 
 export function LandingPage() {
   const [currentStep, setCurrentStep] = useState(0)
@@ -32,26 +33,24 @@ export function LandingPage() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="max-w-5xl mx-auto text-center">
-          {/* Logo */}
-          <div className="mb-8 flex justify-center">
+          {/* Logo and Title */}
+          <div className="mb-8 flex items-center justify-center gap-4">
             <img
-              src="/images/logo-disk.png"
+              src={logoDisk}
               alt="TuneTools Logo"
-              className="w-32 h-32 md:w-40 md:h-40 animate-spin-slow"
-              onError={(e) => {
-                // Fallback if image doesn't load
-                e.currentTarget.style.display = 'none'
-              }}
+              className="w-20 h-20 md:w-24 md:h-24 animate-[spin_8s_linear_infinite]"
             />
+            <h1 className="text-5xl md:text-7xl font-bold text-brand-primary">
+              TuneTools
+            </h1>
           </div>
 
           {/* Tagline */}
-          <h1 className="text-5xl md:text-7xl font-bold text-brand-primary mb-6">
-            TuneTools
-          </h1>
-          <p className="text-2xl md:text-3xl text-gray-700 dark:text-gray-300 mb-4 font-semibold">
-            Your Daily Song, Generated from Your Life
-          </p>
+          <div className="mb-6">
+            <p className="text-2xl md:text-3xl text-gray-700 dark:text-gray-300 mb-4 font-semibold">
+              Your Daily Song, Generated from Your Life
+            </p>
+          </div>
           <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-12 max-w-3xl mx-auto">
             Transform your daily context—news, weather, and calendar events—into personalized AI-generated songs.
             Every day is unique. Your soundtrack should be too.

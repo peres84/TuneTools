@@ -8,7 +8,7 @@ export function ProfilePage() {
         
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
           <p className="text-gray-600 dark:text-gray-400">
-            Profile management will be implemented in a future task
+            Profile management will be implemented in the future
           </p>
         </div>
       </div>

@@ -97,10 +97,13 @@ export function SongList({ songs, albumName }: SongListProps) {
 
   if (!songs || songs.length === 0) {
     return (
-      <div className="text-center py-12">
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-12 text-center">
         <MusicalNoteIcon className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          {albumName ? `No Songs in ${albumName}` : 'No Songs Yet'}
+        </h3>
         <p className="text-gray-600 dark:text-gray-400">
-          {albumName ? `No songs in ${albumName} yet` : 'No songs yet'}
+          {albumName ? 'This album is empty' : 'Generate your first song to get started!'}
         </p>
       </div>
     )

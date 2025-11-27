@@ -8,7 +8,7 @@ export function SettingsPage() {
         
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
           <p className="text-gray-600 dark:text-gray-400">
-            Settings management will be implemented in a future task
+            Settings management will be implemented in the future
           </p>
         </div>
       </div>

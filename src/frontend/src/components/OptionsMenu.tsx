@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { useState } from 'react'
 import { EllipsisVerticalIcon } from '@heroicons/react/24/outline'
 
 interface MenuItem {
@@ -15,49 +14,32 @@ interface OptionsMenuProps {
 
 export function OptionsMenu({ items }: OptionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        menuRef.current && 
-        !menuRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false)
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
 
   const handleToggle = (e: React.MouseEvent) => {
+    console.log('🔘 [OptionsMenu] Button clicked, current isOpen:', isOpen)
     e.stopPropagation()
-    
-    if (!isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      setMenuPosition({
-        top: rect.bottom + window.scrollY + 8,
-        left: rect.right + window.scrollX - 192 // 192px = w-48
-      })
-    }
-    
     setIsOpen(!isOpen)
   }
+
+  const handleClose = () => {
+    console.log('❌ [OptionsMenu] Closing menu')
+    setIsOpen(false)
+  }
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    handleClose()
+  }
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+  }
+
+  console.log('🎨 [OptionsMenu] Rendering, isOpen:', isOpen, 'items count:', items.length)
 
   return (
     <>
       <button
-        ref={buttonRef}
         onClick={handleToggle}
         className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         aria-label="Options"
@@ -65,37 +47,45 @@ export function OptionsMenu({ items }: OptionsMenuProps) {
         <EllipsisVerticalIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
       </button>
 
-      {isOpen && createPortal(
+      {isOpen && (
         <div 
-          ref={menuRef}
-          className="fixed w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[9999]"
-          style={{
-            top: `${menuPosition.top}px`,
-            left: `${menuPosition.left}px`
-          }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]"
+          onClick={handleBackdropClick}
         >
-          <div className="py-1">
-            {items.map((item, index) => (
-              <button
-                key={index}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  item.onClick()
-                  setIsOpen(false)
-                }}
-                className={`w-full px-4 py-2 text-left flex items-center gap-3 transition-colors ${
-                  item.variant === 'danger'
-                    ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-              >
-                {item.icon && <span className="w-5 h-5">{item.icon}</span>}
-                <span className="text-sm font-medium">{item.label}</span>
-              </button>
-            ))}
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 max-w-sm w-full mx-4"
+            onClick={handleMenuClick}
+          >
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Options</h3>
+            <div className="space-y-2">
+              {items.map((item, index) => (
+                <button
+                  key={index}
+                  onClick={(e) => {
+                    console.log('🎯 [OptionsMenu] Menu item clicked:', item.label)
+                    e.stopPropagation()
+                    item.onClick()
+                    setIsOpen(false)
+                  }}
+                  className={`w-full px-4 py-3 text-left flex items-center gap-3 rounded-lg transition-colors ${
+                    item.variant === 'danger'
+                      ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {item.icon && <span className="w-5 h-5">{item.icon}</span>}
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleClose}
+              className="mt-4 w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </>
   )

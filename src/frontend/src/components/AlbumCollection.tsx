@@ -25,6 +25,7 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
   const queryClient = useQueryClient()
   const [editingAlbum, setEditingAlbum] = useState<Album | null>(null)
   const [deletingAlbum, setDeletingAlbum] = useState<Album | null>(null)
+  const [loadingAlbumId, setLoadingAlbumId] = useState<string | null>(null)
 
   const { data: albums, isLoading, error } = useQuery({
     queryKey: ['albums'],
@@ -55,6 +56,7 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
   // Update album name mutation
   const updateAlbumMutation = useMutation({
     mutationFn: async ({ albumId, name }: { albumId: string; name: string }) => {
+      setLoadingAlbumId(albumId)
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/albums/${albumId}`,
         {
@@ -71,6 +73,10 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['albums'] })
+      setLoadingAlbumId(null)
+    },
+    onError: () => {
+      setLoadingAlbumId(null)
     }
   })
 
@@ -98,6 +104,7 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
   // Update vinyl disk mutation
   const updateVinylDiskMutation = useMutation({
     mutationFn: async ({ albumId, file }: { albumId: string; file: File }) => {
+      setLoadingAlbumId(albumId)
       const formData = new FormData()
       formData.append('file', file)
       
@@ -116,6 +123,10 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['albums'] })
+      setLoadingAlbumId(null)
+    },
+    onError: () => {
+      setLoadingAlbumId(null)
     }
   })
 
@@ -179,27 +190,43 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {albums.map((album) => (
+      {albums.map((album) => {
+        const isLoading = loadingAlbumId === album.id
+        return (
         <div
           key={album.id}
-          onClick={() => onAlbumClick?.(album.id)}
-          className="group bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden transform hover:scale-105"
+          onClick={() => !isLoading && onAlbumClick?.(album.id)}
+          className={`group bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden transform hover:scale-105 ${
+            isLoading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+          }`}
         >
           {/* Album artwork */}
           <div className="relative aspect-square overflow-hidden bg-gray-200 dark:bg-gray-700">
             <img
-              src={album.vinyl_disk_url}
+              src={`${album.vinyl_disk_url}?t=${Date.now()}`}
               alt={album.name}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              key={album.vinyl_disk_url}
             />
-            {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="bg-white/90 dark:bg-gray-900/90 rounded-full p-4">
-                  <MusicalNoteIcon className="w-8 h-8 text-brand-primary" />
+            {/* Loading overlay */}
+            {isLoading && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-2"></div>
+                  <p className="text-white text-sm font-medium">Updating...</p>
                 </div>
               </div>
-            </div>
+            )}
+            {/* Overlay on hover */}
+            {!isLoading && (
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="bg-white/90 dark:bg-gray-900/90 rounded-full p-4">
+                    <MusicalNoteIcon className="w-8 h-8 text-brand-primary" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Album info */}
@@ -209,26 +236,28 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
                 {album.name}
               </h3>
               <div onClick={(e) => e.stopPropagation()} className="relative z-10">
-                <OptionsMenu
-                  items={[
-                    {
-                      label: 'Rename Album',
-                      icon: <PencilIcon className="w-5 h-5" />,
-                      onClick: () => setEditingAlbum(album)
-                    },
-                    {
-                      label: 'Change Cover',
-                      icon: <PhotoIcon className="w-5 h-5" />,
-                      onClick: () => handleFileSelect(album.id)
-                    },
-                    {
-                      label: 'Delete Album',
-                      icon: <TrashIcon className="w-5 h-5" />,
-                      onClick: () => setDeletingAlbum(album),
-                      variant: 'danger'
-                    }
-                  ]}
-                />
+                {!isLoading && (
+                  <OptionsMenu
+                    items={[
+                      {
+                        label: 'Rename Album',
+                        icon: <PencilIcon className="w-5 h-5" />,
+                        onClick: () => setEditingAlbum(album)
+                      },
+                      {
+                        label: 'Change Cover',
+                        icon: <PhotoIcon className="w-5 h-5" />,
+                        onClick: () => handleFileSelect(album.id)
+                      },
+                      {
+                        label: 'Delete Album',
+                        icon: <TrashIcon className="w-5 h-5" />,
+                        onClick: () => setDeletingAlbum(album),
+                        variant: 'danger'
+                      }
+                    ]}
+                  />
+                )}
               </div>
             </div>
             
@@ -263,7 +292,7 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
             </div>
           </div>
         </div>
-      ))}
+      )})}
 
       {/* Edit Album Modal */}
       <EditModal
