@@ -6,11 +6,21 @@ import os
 import json
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
+from configuration.config_loader import config
 
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Get LLM configuration
+LLM_CONFIG = config["llm"]
+PRIMARY_PROVIDER = LLM_CONFIG["primary_provider"]
+FALLBACK_PROVIDER = LLM_CONFIG["fallback_provider"]
+OPENAI_MODEL = LLM_CONFIG["openai_model"]
+GEMINI_MODEL = LLM_CONFIG["gemini_model"]
+TEMPERATURE = LLM_CONFIG["temperature"]
+MAX_TOKENS = LLM_CONFIG["max_tokens"]
 
 
 class LLMService:
@@ -175,7 +185,7 @@ Return ONLY valid JSON, no additional text."""
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
         
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=OPENAI_MODEL,
             messages=[
                 {
                     "role": "system",
@@ -186,8 +196,8 @@ Return ONLY valid JSON, no additional text."""
                     "content": prompt
                 }
             ],
-            temperature=0.8,
-            max_tokens=1500,
+            temperature=TEMPERATURE,
+            max_tokens=MAX_TOKENS,
             response_format={"type": "json_object"}
         )
         
@@ -198,8 +208,8 @@ Return ONLY valid JSON, no additional text."""
         import google.generativeai as genai
         
         genai.configure(api_key=GEMINI_API_KEY)
-        # Use gemini-pro for stable API access
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        # Use configured Gemini model
+        model = genai.GenerativeModel(GEMINI_MODEL)
         
         response = model.generate_content(
             prompt,

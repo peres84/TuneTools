@@ -9,11 +9,20 @@ from typing import Optional
 from dotenv import load_dotenv
 from io import BytesIO
 from PIL import Image
+from configuration.config_loader import config
 
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Get image generation configuration
+IMG_CONFIG = config["image_generation"]
+PRIMARY_PROVIDER = IMG_CONFIG["primary_provider"]
+FALLBACK_PROVIDER = IMG_CONFIG["fallback_provider"]
+GEMINI_MODEL = IMG_CONFIG["gemini_model"]
+OPENAI_MODEL = IMG_CONFIG["openai_model"]
+IMAGE_SIZE = IMG_CONFIG["image_size"]
 
 
 class ImageGenerationService:
@@ -133,9 +142,9 @@ Visual elements:
         
         genai.configure(api_key=GEMINI_API_KEY)
         
-        # Use Gemini Pro for image generation
+        # Use configured Gemini model for image generation
         # Note: Actual Imagen API may differ - adjust as needed
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel(GEMINI_MODEL)
         
         # For now, we'll use DALL-E style approach
         # Gemini Imagen API integration would go here
@@ -151,9 +160,9 @@ Visual elements:
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
         
         response = client.images.generate(
-            model="dall-e-3",
+            model=OPENAI_MODEL,
             prompt=prompt,
-            size="1024x1024",
+            size=IMAGE_SIZE,
             quality="standard",
             n=1,
         )

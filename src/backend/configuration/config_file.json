@@ -1,0 +1,54 @@
+{
+    "app": {
+        "title": "TuneTools API",
+        "description": "AI-powered daily song generation platform",
+        "version": "1.0.0"
+    },
+    "logging": {
+        "logging_level": "info",
+        "dir_name": "logs",
+        "log_file_name": "tunetools"
+    },
+    "network": {
+        "uvicorn_app_reference": "main:app",
+        "server_port": 8000,
+        "host": "0.0.0.0",
+        "reload": false,
+        "workers": 1,
+        "proxy_headers": true
+    },
+    "llm": {
+        "primary_provider": "openai",
+        "fallback_provider": "gemini",
+        "openai_model": "gpt-4o-mini",
+        "gemini_model": "gemini-pro",
+        "temperature": 0.8,
+        "max_tokens": 1500
+    },
+    "image_generation": {
+        "primary_provider": "gemini",
+        "fallback_provider": "openai",
+        "gemini_model": "gemini-pro",
+        "openai_model": "dall-e-3",
+        "image_size": "1024x1024"
+    },
+    "song_generation": {
+        "runpod_timeout_seconds": 900,
+        "max_retries": 3
+    },
+    "news": {
+        "primary_api": "serpapi",
+        "fallback_apis": ["newsapi", "worldnews"],
+        "preferred_articles_count": 7,
+        "general_articles_count": 3,
+        "cache_ttl_seconds": 3600
+    },
+    "weather": {
+        "default_location": "New York",
+        "cache_ttl_seconds": 1800
+    },
+    "albums": {
+        "songs_per_album": 7,
+        "week_start_day": "monday"
+    }
+}

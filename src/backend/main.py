@@ -10,14 +10,20 @@ import os
 # Load environment variables
 load_dotenv()
 
+# Import configuration
+from configuration.config_loader import config
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Import authentication dependencies
 from utils.middleware import get_current_user
 
-# Initialize FastAPI app
+# Initialize FastAPI app with config
 app = FastAPI(
-    title="TuneTools API",
-    description="AI-powered daily song generation platform",
-    version="1.0.0",
+    title=config["app"]["title"],
+    description=config["app"]["description"],
+    version=config["app"]["version"],
 )
 
 # Configure CORS
@@ -31,7 +37,7 @@ origins = [
 # Remove empty strings from origins
 origins = [origin for origin in origins if origin]
 
-print(f"🌐 CORS enabled for origins: {origins}")
+logger.info(f"CORS enabled for origins: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -84,9 +90,14 @@ app.include_router(share.router, prefix="/api/share", tags=["share"])
 
 if __name__ == "__main__":
     import uvicorn
+    
+    # Use configuration
+    network_config = config["network"]
+    
     uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
+        network_config["uvicorn_app_reference"],
+        host=network_config["host"],
+        port=network_config["server_port"],
+        reload=network_config["reload"],
+        log_level="info"
     )
