@@ -12,25 +12,38 @@ load_dotenv(dotenv_path=env_path)
 
 # Supabase configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-# Try both SUPABASE_KEY and SUPABASE_ANON_KEY for compatibility
-SUPABASE_KEY = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")
+# Try multiple key names for compatibility
+SUPABASE_KEY = (
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY") or  # Preferred name
+    os.getenv("SUPABASE_KEY") or               # Alternative
+    os.getenv("SUPABASE_ANON_KEY")             # Fallback (not recommended for backend)
+)
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise EnvironmentError(
-        "Missing SUPABASE_URL or SUPABASE_KEY/SUPABASE_ANON_KEY. "
+        "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. "
         "Add them to your .env file in the project root."
     )
 
 
-def get_supabase_client() -> Client:
+def get_supabase_client(access_token: str = None) -> Client:
     """
     Get Supabase client instance
+    
+    Args:
+        access_token: Optional user JWT token for RLS context
     
     Returns:
         Client: Supabase client
     """
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+    client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # If access token provided, set it for RLS context
+    if access_token:
+        client.postgrest.auth(access_token)
+    
+    return client
 
 
-# Global client instance
+# Global client instance (for non-RLS operations)
 supabase: Client = get_supabase_client()

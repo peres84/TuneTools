@@ -1,7 +1,7 @@
 """
 Authentication middleware for FastAPI
 """
-from fastapi import Request, HTTPException
+from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 import jwt
@@ -114,7 +114,7 @@ class AuthMiddleware:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = security
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> str:
     """
     Dependency to get current authenticated user ID

@@ -25,8 +25,13 @@ origins = [
     "http://localhost:3000",  # React dev server
     "http://localhost:5173",  # Vite dev server
     "http://localhost:8080",
-    os.getenv("FRONTEND_URL", ""),  # Production frontend URL
+    os.getenv("FRONTEND_URL", ""),  # Production frontend URL (e.g., https://tunetools.vercel.app)
 ]
+
+# Remove empty strings from origins
+origins = [origin for origin in origins if origin]
+
+print(f"🌐 CORS enabled for origins: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,6 +39,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
