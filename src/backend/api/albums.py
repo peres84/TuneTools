@@ -1,12 +1,21 @@
 """
-Albums API endpoints
+#############################################################################
+### Albums API endpoints
+###
+### @file albums.py
+### @author Sebastian Russo
+### @date 2025
+#############################################################################
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import List
 
 from models.album import Album, AlbumWithSongs
 from db.supabase_client import supabase
 from utils.middleware import get_current_user
+from utils.custom_logger import log_handler
+from utils.limiter import limiter as SlowLimiter
+from configuration.config_loader import config
 from services import AlbumService
 
 router = APIRouter()
@@ -16,7 +25,12 @@ album_service = AlbumService()
 
 
 @router.get("/list", response_model=List[Album])
+@SlowLimiter.limit(
+    f"{config['endpoints']['albums_list_endpoint']['request_limit']}/"
+    f"{config['endpoints']['albums_list_endpoint']['unit_of_time_for_limit']}"
+)
 async def list_albums(
+    request: Request,
     limit: int = 10,
     offset: int = 0,
     user_id: str = Depends(get_current_user)
@@ -49,7 +63,11 @@ async def list_albums(
 
 
 @router.get("/current-week", response_model=Album)
-async def get_current_week_album(user_id: str = Depends(get_current_user)):
+@SlowLimiter.limit(
+    f"{config['endpoints']['albums_current_endpoint']['request_limit']}/"
+    f"{config['endpoints']['albums_current_endpoint']['unit_of_time_for_limit']}"
+)
+async def get_current_week_album(request: Request, user_id: str = Depends(get_current_user)):
     """
     Get the album for the current week
     
@@ -88,7 +106,12 @@ async def get_current_week_album(user_id: str = Depends(get_current_user)):
 
 
 @router.get("/{album_id}", response_model=AlbumWithSongs)
+@SlowLimiter.limit(
+    f"{config['endpoints']['albums_get_endpoint']['request_limit']}/"
+    f"{config['endpoints']['albums_get_endpoint']['unit_of_time_for_limit']}"
+)
 async def get_album_with_songs(
+    request: Request,
     album_id: str,
     user_id: str = Depends(get_current_user)
 ):

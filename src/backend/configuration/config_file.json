@@ -5,7 +5,7 @@
         "version": "1.0.0"
     },
     "logging": {
-        "logging_level": "info",
+        "logging_level": "debug",
         "dir_name": "logs",
         "log_file_name": "tunetools"
     },
@@ -16,6 +16,106 @@
         "reload": false,
         "workers": 1,
         "proxy_headers": true
+    },
+    "endpoints": {
+        "root_directory_endpoint": {
+            "request_limit": 25,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "",
+            "endpoint_tag": "root",
+            "endpoint_route": "/"
+        },
+        "user_check_email_endpoint": {
+            "request_limit": 5,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/user",
+            "endpoint_tag": "user",
+            "endpoint_route": "/check-email"
+        },
+        "user_profile_endpoint": {
+            "request_limit": 10,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/user",
+            "endpoint_tag": "user",
+            "endpoint_route": "/profile"
+        },
+        "user_preferences_get_endpoint": {
+            "request_limit": 10,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/user",
+            "endpoint_tag": "user",
+            "endpoint_route": "/preferences"
+        },
+        "user_preferences_update_endpoint": {
+            "request_limit": 5,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/user",
+            "endpoint_tag": "user",
+            "endpoint_route": "/preferences"
+        },
+        "user_preferences_create_endpoint": {
+            "request_limit": 3,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/user",
+            "endpoint_tag": "user",
+            "endpoint_route": "/preferences"
+        },
+        "songs_generate_endpoint": {
+            "request_limit": 3,
+            "unit_of_time_for_limit": "hour",
+            "endpoint_prefix": "/api/songs",
+            "endpoint_tag": "songs",
+            "endpoint_route": "/generate"
+        },
+        "songs_list_endpoint": {
+            "request_limit": 20,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/songs",
+            "endpoint_tag": "songs",
+            "endpoint_route": "/list"
+        },
+        "songs_today_endpoint": {
+            "request_limit": 10,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/songs",
+            "endpoint_tag": "songs",
+            "endpoint_route": "/today"
+        },
+        "songs_get_endpoint": {
+            "request_limit": 20,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/songs",
+            "endpoint_tag": "songs",
+            "endpoint_route": "/{song_id}"
+        },
+        "albums_list_endpoint": {
+            "request_limit": 20,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/albums",
+            "endpoint_tag": "albums",
+            "endpoint_route": "/list"
+        },
+        "albums_current_endpoint": {
+            "request_limit": 10,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/albums",
+            "endpoint_tag": "albums",
+            "endpoint_route": "/current"
+        },
+        "albums_get_endpoint": {
+            "request_limit": 20,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/albums",
+            "endpoint_tag": "albums",
+            "endpoint_route": "/{album_id}"
+        },
+        "share_get_endpoint": {
+            "request_limit": 50,
+            "unit_of_time_for_limit": "minute",
+            "endpoint_prefix": "/api/share",
+            "endpoint_tag": "share",
+            "endpoint_route": "/{share_token}"
+        }
     },
     "llm": {
         "primary_provider": "openai",

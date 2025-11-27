@@ -1,7 +1,13 @@
 """
-User API endpoints
+#############################################################################
+### User API endpoints
+###
+### @file user.py
+### @author Sebastian Russo
+### @date 2025
+#############################################################################
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Optional
 from uuid import UUID
 
@@ -13,12 +19,20 @@ from models.user import (
 )
 from db.supabase_client import supabase
 from utils.middleware import get_current_user
+from utils.custom_logger import log_handler
+from utils.limiter import limiter as SlowLimiter
+from utils.validators import validate_email_format
+from configuration.config_loader import config
 
 router = APIRouter()
 
 
 @router.get("/check-email")
-async def check_email_exists(email: str):
+@SlowLimiter.limit(
+    f"{config['endpoints']['user_check_email_endpoint']['request_limit']}/"
+    f"{config['endpoints']['user_check_email_endpoint']['unit_of_time_for_limit']}"
+)
+async def check_email_exists(request: Request, email: str):
     """
     Check if an email is already registered
     
@@ -31,6 +45,9 @@ async def check_email_exists(email: str):
     Returns:
         dict: {"exists": bool, "confirmed": bool}
     """
+    # Validate email format
+    validate_email_format(email)
+    
     try:
         # Query Supabase auth users via admin API
         # Note: This requires service_role key to access auth.users
@@ -66,7 +83,7 @@ async def check_email_exists(email: str):
         
     except Exception as e:
         # Don't expose internal errors for security
-        print(f"Error checking email: {str(e)}")
+        log_handler.error(f"Error checking email: {str(e)}")
         return {
             "exists": False,
             "confirmed": False
@@ -74,7 +91,11 @@ async def check_email_exists(email: str):
 
 
 @router.get("/profile", response_model=UserProfile)
-async def get_user_profile(user_id: str = Depends(get_current_user)):
+@SlowLimiter.limit(
+    f"{config['endpoints']['user_profile_endpoint']['request_limit']}/"
+    f"{config['endpoints']['user_profile_endpoint']['unit_of_time_for_limit']}"
+)
+async def get_user_profile(request: Request, user_id: str = Depends(get_current_user)):
     """
     Get current user's profile
     
@@ -94,7 +115,11 @@ async def get_user_profile(user_id: str = Depends(get_current_user)):
 
 
 @router.get("/preferences", response_model=UserPreferences)
-async def get_user_preferences(user_id: str = Depends(get_current_user)):
+@SlowLimiter.limit(
+    f"{config['endpoints']['user_preferences_get_endpoint']['request_limit']}/"
+    f"{config['endpoints']['user_preferences_get_endpoint']['unit_of_time_for_limit']}"
+)
+async def get_user_preferences(request: Request, user_id: str = Depends(get_current_user)):
     """
     Get current user's preferences
     
@@ -128,7 +153,12 @@ async def get_user_preferences(user_id: str = Depends(get_current_user)):
 
 
 @router.put("/preferences", response_model=UserPreferences)
+@SlowLimiter.limit(
+    f"{config['endpoints']['user_preferences_update_endpoint']['request_limit']}/"
+    f"{config['endpoints']['user_preferences_update_endpoint']['unit_of_time_for_limit']}"
+)
 async def update_user_preferences(
+    request: Request,
     preferences: UserPreferencesUpdate,
     user_id: str = Depends(get_current_user)
 ):
@@ -189,7 +219,12 @@ async def update_user_preferences(
 
 
 @router.post("/preferences", response_model=UserPreferences, status_code=201)
+@SlowLimiter.limit(
+    f"{config['endpoints']['user_preferences_create_endpoint']['request_limit']}/"
+    f"{config['endpoints']['user_preferences_create_endpoint']['unit_of_time_for_limit']}"
+)
 async def create_user_preferences(
+    request: Request,
     preferences: UserPreferencesCreate,
     user_id: str = Depends(get_current_user)
 ):

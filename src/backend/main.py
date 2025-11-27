@@ -1,30 +1,60 @@
 """
-TuneTools FastAPI Backend
-Main application entry point
+#############################################################################
+### TuneTools FastAPI Backend
+### Main application entry point
+###
+### @file main.py
+### @author Sebastian Russo
+### @date 2025
+#############################################################################
 """
+#Native imports
+import os
+from contextlib import asynccontextmanager
+
+#Third-party imports
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
 from dotenv import load_dotenv
-import os
 
 # Load environment variables
 load_dotenv()
 
 # Import configuration
 from configuration.config_loader import config
-import logging
 
-logger = logging.getLogger(__name__)
+# Import utilities
+from utils.custom_logger import log_handler
+from utils.limiter import limiter
+from utils.request_limiter import rate_limit_handler
 
 # Import authentication dependencies
 from utils.middleware import get_current_user
+
+"""API APP-----------------------------------------------------------"""
+#Lifespan event manager (startup and shutdown)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    port = os.getenv("PORT", config["network"]["server_port"])
+    log_handler.info(f"TuneTools backend server starting on port {port}")
+    yield
+    log_handler.info("TuneTools backend server shutting down")
 
 # Initialize FastAPI app with config
 app = FastAPI(
     title=config["app"]["title"],
     description=config["app"]["description"],
     version=config["app"]["version"],
+    lifespan=lifespan
 )
+
+"""VARIOUS-----------------------------------------------------------"""
+#Setup rate limiter
+app.state.limiter = limiter
+
+#Add global exception handler
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 # Configure CORS
 origins = [
@@ -37,7 +67,7 @@ origins = [
 # Remove empty strings from origins
 origins = [origin for origin in origins if origin]
 
-logger.info(f"CORS enabled for origins: {origins}")
+log_handler.info(f"CORS enabled for origins: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -88,16 +118,26 @@ app.include_router(albums.router, prefix="/api/albums", tags=["albums"])
 app.include_router(share.router, prefix="/api/share", tags=["share"])
 
 
+"""Start server-----------------------------------------------------------"""
 if __name__ == "__main__":
     import uvicorn
     
     # Use configuration
-    network_config = config["network"]
+    port = int(os.getenv("PORT", config["network"]["server_port"]))
+    
+    # Configure uvicorn logging format to match our custom logger
+    log_config = uvicorn.config.LOGGING_CONFIG
+    log_config["formatters"]["default"]["fmt"] = "%(asctime)s %(msecs)03dZ | %(levelname)s | %(message)s"
+    log_config["formatters"]["default"]["datefmt"] = "%Y-%m-%d %H:%M:%S"
+    log_config["formatters"]["access"]["fmt"] = "%(asctime)s %(msecs)03dZ | %(levelname)s | %(client_addr)s - %(request_line)s %(status_code)s"
+    log_config["formatters"]["access"]["datefmt"] = "%Y-%m-%d %H:%M:%S"
     
     uvicorn.run(
-        network_config["uvicorn_app_reference"],
-        host=network_config["host"],
-        port=network_config["server_port"],
-        reload=network_config["reload"],
-        log_level="info"
+        config["network"]["uvicorn_app_reference"],
+        host=config["network"]["host"],
+        port=port,
+        reload=config["network"]["reload"],
+        workers=config["network"]["workers"],
+        proxy_headers=config["network"]["proxy_headers"],
+        log_config=log_config
     )

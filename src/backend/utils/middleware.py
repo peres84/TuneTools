@@ -1,5 +1,11 @@
 """
-Authentication middleware for FastAPI
+#############################################################################
+### Authentication middleware for FastAPI
+###
+### @file middleware.py
+### @author Sebastian Russo
+### @date 2025
+#############################################################################
 """
 from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -8,11 +14,14 @@ import jwt
 import os
 from dotenv import load_dotenv
 
+from utils.custom_logger import log_handler
+
 load_dotenv()
 
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 if not SUPABASE_JWT_SECRET:
+    log_handler.error("Missing SUPABASE_JWT_SECRET environment variable")
     raise EnvironmentError(
         "Missing SUPABASE_JWT_SECRET. "
         "Get it from Supabase Dashboard > Settings > API > JWT Secret"
@@ -54,21 +63,25 @@ class AuthMiddleware:
             return payload
             
         except jwt.ExpiredSignatureError:
+            log_handler.warning("Token has expired")
             raise HTTPException(
                 status_code=401,
                 detail="Token has expired. Please refresh your session."
             )
         except jwt.InvalidAudienceError:
+            log_handler.warning("Invalid token audience")
             raise HTTPException(
                 status_code=401,
                 detail="Invalid token audience"
             )
         except jwt.InvalidTokenError as e:
+            log_handler.warning(f"Invalid token: {str(e)}")
             raise HTTPException(
                 status_code=401,
                 detail=f"Invalid token: {str(e)}"
             )
         except Exception as e:
+            log_handler.error(f"Token validation failed: {str(e)}")
             raise HTTPException(
                 status_code=401,
                 detail=f"Token validation failed: {str(e)}"
@@ -91,11 +104,13 @@ class AuthMiddleware:
         user_id = payload.get("sub")
         
         if not user_id:
+            log_handler.warning("Token missing user ID")
             raise HTTPException(
                 status_code=401,
                 detail="Invalid token: missing user ID"
             )
         
+        log_handler.debug(f"User authenticated: {user_id}")
         return user_id
     
     @staticmethod

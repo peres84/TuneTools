@@ -1,18 +1,31 @@
 """
-Share API endpoints
-Public access to songs via share tokens
+#############################################################################
+### Share API endpoints
+### Public access to songs via share tokens
+###
+### @file share.py
+### @author Sebastian Russo
+### @date 2025
+#############################################################################
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from typing import Optional
 
 from models.song import Song
 from db.supabase_client import supabase
+from utils.custom_logger import log_handler
+from utils.limiter import limiter as SlowLimiter
+from configuration.config_loader import config
 
 router = APIRouter()
 
 
 @router.get("/song/{share_token}")
-async def get_shared_song(share_token: str):
+@SlowLimiter.limit(
+    f"{config['endpoints']['share_get_endpoint']['request_limit']}/"
+    f"{config['endpoints']['share_get_endpoint']['unit_of_time_for_limit']}"
+)
+async def get_shared_song(request: Request, share_token: str):
     """
     Get song by share token (public access, no authentication required)
     

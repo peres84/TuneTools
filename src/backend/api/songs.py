@@ -1,8 +1,14 @@
 """
-Songs API endpoints
-Main orchestration for song generation
+#############################################################################
+### Songs API endpoints
+### Main orchestration for song generation
+###
+### @file songs.py
+### @author Sebastian Russo
+### @date 2025
+#############################################################################
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Optional
 import time
 from datetime import datetime
@@ -11,6 +17,9 @@ from models.song import Song, SongCreate, SongResponse
 from models.context import ContextData, WeatherData, NewsArticle
 from db.supabase_client import supabase
 from utils.middleware import get_current_user
+from utils.custom_logger import log_handler
+from utils.limiter import limiter as SlowLimiter
+from configuration.config_loader import config
 
 # Import all services
 from services import (
@@ -34,7 +43,12 @@ song_service = SongGenerationService()
 
 
 @router.post("/generate", response_model=SongResponse)
+@SlowLimiter.limit(
+    f"{config['endpoints']['songs_generate_endpoint']['request_limit']}/"
+    f"{config['endpoints']['songs_generate_endpoint']['unit_of_time_for_limit']}"
+)
 async def generate_song(
+    request: Request,
     location: Optional[str] = None,
     user_id: str = Depends(get_current_user)
 ):
@@ -61,14 +75,14 @@ async def generate_song(
     start_time = time.time()
     
     try:
-        print(f"🎵 Starting song generation for user {user_id}")
+        log_handler.info(f"🎵 Starting song generation for user {user_id}")
         
         # Step 1: Aggregate context data
-        print("📊 Step 1: Aggregating context data...")
+        log_handler.info("📊 Step 1: Aggregating context data...")
         context_data = await _aggregate_context_data(user_id, location)
         
         # Step 2: Generate lyrics and genre tags
-        print("🤖 Step 2: Generating lyrics and genre tags...")
+        log_handler.info("🤖 Step 2: Generating lyrics and genre tags...")
         song_content = llm_service.generate_song_content(
             weather_data=context_data.get('weather', {}),
             news_articles=context_data.get('news', []),
@@ -77,7 +91,7 @@ async def generate_song(
         )
         
         # Step 3: Get or create weekly album
-        print("📀 Step 3: Getting weekly album...")
+        log_handler.info("📀 Step 3: Getting weekly album...")
         album = album_service.get_or_create_weekly_album(
             user_id=user_id,
             song_themes=[song_content['title']],
@@ -85,7 +99,7 @@ async def generate_song(
         )
         
         # Step 4: Generate song audio
-        print("🎼 Step 4: Generating song audio...")
+        log_handler.info("🎼 Step 4: Generating song audio...")
         genre_tags, formatted_lyrics = llm_service.format_for_yue(song_content)
         
         audio_result = song_service.generate_song(
@@ -94,7 +108,7 @@ async def generate_song(
         )
         
         # Step 5: Store audio in Supabase storage
-        print("💾 Step 5: Storing audio file...")
+        log_handler.info("💾 Step 5: Storing audio file...")
         audio_url = await _store_audio_file(
             user_id=user_id,
             audio_data=audio_result['audio_data'],
@@ -102,7 +116,7 @@ async def generate_song(
         )
         
         # Step 6: Store song metadata in database
-        print("📝 Step 6: Storing song metadata...")
+        log_handler.info("📝 Step 6: Storing song metadata...")
         song_data = SongCreate(
             title=song_content['title'],
             description=song_content['description'],
@@ -120,7 +134,7 @@ async def generate_song(
         song = await _create_song_record(user_id, song_data)
         
         elapsed = time.time() - start_time
-        print(f"✅ Song generation complete! ({elapsed / 60:.1f} minutes)")
+        log_handler.info(f"✅ Song generation complete! ({elapsed / 60:.1f} minutes)")
         
         # Return song with album info
         return SongResponse(
@@ -130,7 +144,7 @@ async def generate_song(
         )
         
     except Exception as e:
-        print(f"❌ Song generation failed: {str(e)}")
+        log_handler.error(f"❌ Song generation failed: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Song generation failed: {str(e)}"
@@ -175,7 +189,7 @@ async def _aggregate_context_data(
                 'mood_preference': 'uplifting'
             }
     except Exception as e:
-        print(f"⚠️ Failed to get user preferences: {str(e)}")
+        log_handler.warning(f"⚠️ Failed to get user preferences: {str(e)}")
         context['user_preferences'] = {
             'categories': ['general'],
             'music_genres': ['pop'],
@@ -192,9 +206,9 @@ async def _aggregate_context_data(
             weather = weather_service.get_weather_by_city("New York")
         
         context['weather'] = weather.dict()
-        print(f"✅ Weather: {weather.weather_condition}, {weather.temp_c}°C")
+        log_handler.info(f"✅ Weather: {weather.weather_condition}, {weather.temp_c}°C")
     except Exception as e:
-        print(f"⚠️ Failed to get weather: {str(e)}")
+        log_handler.warning(f"⚠️ Failed to get weather: {str(e)}")
         context['weather'] = None
     
     # Get news articles
@@ -207,9 +221,9 @@ async def _aggregate_context_data(
         )
         
         context['news'] = [article.dict() for article in news_articles]
-        print(f"✅ News: {len(news_articles)} articles")
+        log_handler.info(f"✅ News: {len(news_articles)} articles")
     except Exception as e:
-        print(f"⚠️ Failed to get news: {str(e)}")
+        log_handler.warning(f"⚠️ Failed to get news: {str(e)}")
         context['news'] = []
     
     # Get calendar activities
@@ -220,9 +234,9 @@ async def _aggregate_context_data(
         )
         
         context['calendar'] = [activity.dict() for activity in activities]
-        print(f"✅ Calendar: {len(activities)} activities")
+        log_handler.info(f"✅ Calendar: {len(activities)} activities")
     except Exception as e:
-        print(f"⚠️ Failed to get calendar: {str(e)}")
+        log_handler.warning(f"⚠️ Failed to get calendar: {str(e)}")
         context['calendar'] = []
     
     return context
@@ -254,7 +268,7 @@ async def _store_audio_file(
         # Get public URL
         public_url = supabase.storage.from_("audio_files").get_public_url(storage_filename)
         
-        print(f"✅ Audio uploaded: {storage_filename}")
+        log_handler.info(f"✅ Audio uploaded: {storage_filename}")
         
         return public_url
         
@@ -302,7 +316,7 @@ async def _create_song_record(
             raise Exception("Failed to create song record")
         
         song = Song(**response.data[0])
-        print(f"✅ Song created: {song.title} (share: {song.share_token})")
+        log_handler.info(f"✅ Song created: {song.title} (share: {song.share_token})")
         
         return song
         
@@ -311,7 +325,12 @@ async def _create_song_record(
 
 
 @router.get("/list")
+@SlowLimiter.limit(
+    f"{config['endpoints']['songs_list_endpoint']['request_limit']}/"
+    f"{config['endpoints']['songs_list_endpoint']['unit_of_time_for_limit']}"
+)
 async def list_songs(
+    request: Request,
     limit: int = 10,
     offset: int = 0,
     user_id: str = Depends(get_current_user)
@@ -348,7 +367,11 @@ async def list_songs(
 
 
 @router.get("/today")
-async def get_today_song(user_id: str = Depends(get_current_user)):
+@SlowLimiter.limit(
+    f"{config['endpoints']['songs_today_endpoint']['request_limit']}/"
+    f"{config['endpoints']['songs_today_endpoint']['unit_of_time_for_limit']}"
+)
+async def get_today_song(request: Request, user_id: str = Depends(get_current_user)):
     """
     Get today's song for the user
     
@@ -381,13 +404,18 @@ async def get_today_song(user_id: str = Depends(get_current_user)):
         return None
             
     except Exception as e:
-        print(f"Error fetching today's song: {str(e)}")
+        log_handler.error(f"Error fetching today's song: {str(e)}")
         # Return None instead of raising error - no song today is valid
         return None
 
 
 @router.get("/{song_id}")
+@SlowLimiter.limit(
+    f"{config['endpoints']['songs_get_endpoint']['request_limit']}/"
+    f"{config['endpoints']['songs_get_endpoint']['unit_of_time_for_limit']}"
+)
 async def get_song(
+    request: Request,
     song_id: str,
     user_id: str = Depends(get_current_user)
 ):
