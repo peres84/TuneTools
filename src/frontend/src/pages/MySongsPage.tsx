@@ -1,16 +1,25 @@
+import { useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '../components/DashboardLayout'
+import { AlbumCollection } from '../components/AlbumCollection'
 
 export function MySongsPage() {
+  const navigate = useNavigate()
+
+  const handleAlbumClick = (albumId: string) => {
+    navigate(`/dashboard/album/${albumId}`)
+  }
+
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-brand-primary mb-8">My Songs</h1>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-brand-primary mb-2">My Songs</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Song collection will be implemented in a future task
+            Browse your weekly albums and songs
           </p>
         </div>
+        
+        <AlbumCollection onAlbumClick={handleAlbumClick} />
       </div>
     </DashboardLayout>
   )
