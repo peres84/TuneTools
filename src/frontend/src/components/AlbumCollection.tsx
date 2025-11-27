@@ -50,7 +50,11 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
       return response.json() as Promise<Album[]>
     },
     enabled: !!session?.access_token,
-    staleTime: 5 * 60 * 1000 // Cache for 5 minutes
+    staleTime: Infinity, // Data never becomes stale automatically
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    refetchOnMount: false, // Don't refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: false // Don't refetch on reconnect
   })
 
   // Update album name mutation

@@ -1,15 +1,18 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { SongList } from '../components/SongList'
 import { AlbumCollection } from '../components/AlbumCollection'
+import { ArrowPathIcon } from '@heroicons/react/24/outline'
 
 export function MySongsPage() {
   const { session } = useAuth()
+  const queryClient = useQueryClient()
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  // Fetch all songs
+  // Fetch all songs with caching
   const { data: songsData, isLoading: songsLoading } = useQuery({
     queryKey: ['allSongs'],
     queryFn: async () => {
@@ -27,10 +30,15 @@ export function MySongsPage() {
       if (!response.ok) throw new Error('Failed to fetch songs')
       return response.json()
     },
-    enabled: !!session?.access_token
+    enabled: !!session?.access_token,
+    staleTime: Infinity, // Data never becomes stale automatically
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    refetchOnMount: false, // Don't refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: false // Don't refetch on reconnect
   })
 
-  // Fetch songs for selected album
+  // Fetch songs for selected album with caching
   const { data: albumWithSongs, isLoading: albumSongsLoading } = useQuery({
     queryKey: ['album', selectedAlbumId],
     queryFn: async () => {
@@ -48,7 +56,12 @@ export function MySongsPage() {
       if (!response.ok) throw new Error('Failed to fetch album songs')
       return response.json()
     },
-    enabled: !!session?.access_token && !!selectedAlbumId
+    enabled: !!session?.access_token && !!selectedAlbumId,
+    staleTime: Infinity, // Data never becomes stale automatically
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    refetchOnMount: false, // Don't refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: false // Don't refetch on reconnect
   })
 
   const handleAlbumClick = (albumId: string) => {
@@ -57,6 +70,15 @@ export function MySongsPage() {
 
   const handleBackToOverview = () => {
     setSelectedAlbumId(null)
+  }
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['albums'] }),
+      queryClient.invalidateQueries({ queryKey: ['allSongs'] })
+    ])
+    setTimeout(() => setIsRefreshing(false), 500)
   }
 
   // If an album is selected, show only that album's songs
@@ -97,13 +119,23 @@ export function MySongsPage() {
   return (
     <DashboardLayout>
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            My Music
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Your personalized songs organized into weekly albums
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              My Music
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Your personalized songs organized into weekly albums
+            </p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ArrowPathIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
         </div>
 
         {/* Albums Section */}
