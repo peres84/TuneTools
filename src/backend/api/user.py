@@ -17,6 +17,62 @@ from utils.middleware import get_current_user
 router = APIRouter()
 
 
+@router.get("/check-email")
+async def check_email_exists(email: str):
+    """
+    Check if an email is already registered
+    
+    This is a public endpoint (no auth required) to improve UX during signup.
+    Returns whether the email exists and if it's confirmed.
+    
+    Args:
+        email: Email address to check
+        
+    Returns:
+        dict: {"exists": bool, "confirmed": bool}
+    """
+    try:
+        # Query Supabase auth users via admin API
+        # Note: This requires service_role key to access auth.users
+        from supabase import create_client
+        import os
+        
+        # Create admin client with service role key
+        supabase_url = os.getenv("SUPABASE_URL")
+        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        
+        if not supabase_url or not service_role_key:
+            raise HTTPException(status_code=500, detail="Server configuration error")
+        
+        admin_client = create_client(supabase_url, service_role_key)
+        
+        # Check if user exists in auth.users
+        response = admin_client.auth.admin.list_users()
+        
+        # Find user by email
+        user_exists = False
+        email_confirmed = False
+        
+        for user in response:
+            if user.email and user.email.lower() == email.lower():
+                user_exists = True
+                email_confirmed = user.email_confirmed_at is not None
+                break
+        
+        return {
+            "exists": user_exists,
+            "confirmed": email_confirmed
+        }
+        
+    except Exception as e:
+        # Don't expose internal errors for security
+        print(f"Error checking email: {str(e)}")
+        return {
+            "exists": False,
+            "confirmed": False
+        }
+
+
 @router.get("/profile", response_model=UserProfile)
 async def get_user_profile(user_id: str = Depends(get_current_user)):
     """

@@ -55,6 +55,29 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
+        // Check if email already exists
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_BASE_URL}/api/user/check-email?email=${encodeURIComponent(email)}`
+          )
+          const data = await response.json()
+          
+          if (data.exists) {
+            if (data.confirmed) {
+              setError('This email is already registered. Please log in instead.')
+              setLoading(false)
+              return
+            } else {
+              setError('This email is already registered but not confirmed. Please check your email for the confirmation link.')
+              setLoading(false)
+              return
+            }
+          }
+        } catch (emailCheckError) {
+          console.error('Email check failed:', emailCheckError)
+          // Continue with signup if check fails (don't block user)
+        }
+
         const { error } = await signUp(email, password)
         if (error) {
           setError(error.message)
@@ -220,6 +243,13 @@ export function AuthForm({ mode }: AuthFormProps) {
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800 dark:text-red-400">{error}</h3>
+                  {mode === 'signup' && error.includes('already registered') && (
+                    <p className="mt-2 text-sm text-red-700 dark:text-red-300">
+                      <a href="/login" className="font-medium underline hover:text-red-600 dark:hover:text-red-200">
+                        Go to login →
+                      </a>
+                    </p>
+                  )}
                   {mode === 'login' && error.includes('signed up') && (
                     <p className="mt-2 text-sm text-red-700 dark:text-red-300">
                       <a href="/signup" className="font-medium underline hover:text-red-600 dark:hover:text-red-200">
