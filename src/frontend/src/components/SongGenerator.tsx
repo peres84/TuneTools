@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MusicalNoteIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 interface Song {
   id: string
@@ -19,21 +20,15 @@ interface SongGeneratorProps {
 
 export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
   const { session } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const [statusMessage, setStatusMessage] = useState<string>('')
-  const [generatedSong, setGeneratedSong] = useState<Song | null>(null)
-  const [todaySong, setTodaySong] = useState<Song | null>(null)
-  const [checkingToday, setCheckingToday] = useState(false)
 
-  const checkTodaySong = async () => {
-    if (!session?.access_token) {
-      console.error('No access token available')
-      return false
-    }
+  // Query to fetch today's song (cached)
+  const { data: todaySong, isLoading: checkingToday } = useQuery({
+    queryKey: ['todaySong'],
+    queryFn: async () => {
+      if (!session?.access_token) return null
 
-    setCheckingToday(true)
-    try {
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/songs/today`,
         {
@@ -45,42 +40,21 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
 
       if (response.ok) {
         const song = await response.json()
-        // Check if song is null (no song for today)
-        if (song && song.id) {
-          setTodaySong(song)
-          return true
-        }
-        // No song for today - this is normal
-        setTodaySong(null)
-        return false
+        return song && song.id ? song : null
       }
-      return false
-    } catch (err) {
-      console.error('Error checking today song:', err)
-      return false
-    } finally {
-      setCheckingToday(false)
-    }
-  }
+      return null
+    },
+    enabled: !!session?.access_token,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnMount: true,
+    refetchOnWindowFocus: false
+  })
 
-  const generateSong = async () => {
-    if (!session?.access_token) {
-      setError('You must be logged in to generate a song')
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-    setStatusMessage('Checking if you already have a song for today...')
-    setGeneratedSong(null)
-
-    try {
-      // Check if song already exists for today
-      const hasTodaySong = await checkTodaySong()
-      if (hasTodaySong) {
-        setStatusMessage('')
-        setLoading(false)
-        return
+  // Mutation to generate a new song
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      if (!session?.access_token) {
+        throw new Error('You must be logged in to generate a song')
       }
 
       setStatusMessage('Gathering your daily context (news, weather, calendar)...')
@@ -109,24 +83,30 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       }
 
       setStatusMessage('Generating lyrics and music tags...')
-      
       const song = await response.json()
-      
-      setGeneratedSong(song)
+      return song
+    },
+    onSuccess: (song) => {
       setStatusMessage('Your song is ready!')
-      
+      // Invalidate and refetch today's song
+      queryClient.invalidateQueries({ queryKey: ['todaySong'] })
       if (onGenerationComplete) {
         onGenerationComplete(song)
       }
-
-    } catch (err) {
+    },
+    onError: (err: Error) => {
       console.error('Song generation error:', err)
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
-      setError(errorMessage)
       setStatusMessage('')
-    } finally {
-      setLoading(false)
     }
+  })
+
+  const handleGenerateSong = () => {
+    if (todaySong) {
+      // Song already exists for today
+      return
+    }
+    setStatusMessage('Checking if you already have a song for today...')
+    generateMutation.mutate()
   }
 
   return (
@@ -160,7 +140,7 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       )}
 
       {/* Generation Button */}
-      {!todaySong && !generatedSong && (
+      {!todaySong && !generateMutation.data && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
           <div className="mb-6">
             <SparklesIcon className="w-16 h-16 mx-auto text-brand-primary mb-4" />
@@ -173,11 +153,11 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
           </div>
 
           <button
-            onClick={generateSong}
-            disabled={loading || checkingToday}
+            onClick={handleGenerateSong}
+            disabled={generateMutation.isPending || checkingToday}
             className="px-8 py-4 bg-brand-primary text-white text-lg font-semibold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 mx-auto"
           >
-            {loading || checkingToday ? (
+            {generateMutation.isPending || checkingToday ? (
               <>
                 <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -196,7 +176,7 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       )}
 
       {/* Loading State with Progress */}
-      {loading && statusMessage && (
+      {generateMutation.isPending && statusMessage && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500 rounded-lg p-6">
           <div className="flex items-center gap-4">
             <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -216,7 +196,7 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       )}
 
       {/* Error State */}
-      {error && (
+      {generateMutation.isError && (
         <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
           <div className="flex items-start gap-4">
             <svg className="h-6 w-6 text-red-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -227,10 +207,10 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
                 Generation Failed
               </h3>
               <p className="text-red-800 dark:text-red-200 text-sm">
-                {error}
+                {generateMutation.error?.message || 'An unexpected error occurred'}
               </p>
               <button
-                onClick={generateSong}
+                onClick={() => generateMutation.mutate()}
                 className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
               >
                 Try Again
@@ -241,20 +221,20 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       )}
 
       {/* Generated Song Display */}
-      {generatedSong && (
+      {generateMutation.data && (
         <div className="bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 dark:from-brand-primary/20 dark:to-brand-secondary/20 border-2 border-brand-primary rounded-lg p-8">
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-primary rounded-full mb-4">
               <MusicalNoteIcon className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              {generatedSong.title}
+              {generateMutation.data.title}
             </h2>
             <p className="text-gray-700 dark:text-gray-300 mb-4">
-              {generatedSong.description}
+              {generateMutation.data.description}
             </p>
             <div className="flex flex-wrap gap-2 justify-center mb-6">
-              {generatedSong.genre_tags.split(',').map((tag, index) => (
+              {generateMutation.data.genre_tags.split(',').map((tag: string, index: number) => (
                 <span
                   key={index}
                   className="px-3 py-1 bg-brand-primary/20 text-brand-primary dark:text-brand-secondary rounded-full text-sm font-medium"
@@ -267,13 +247,13 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
 
           <div className="flex gap-4 justify-center">
             <button
-              onClick={() => window.location.href = `/song/${generatedSong.id}`}
+              onClick={() => window.location.href = `/song/${generateMutation.data.id}`}
               className="px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-colors font-semibold"
             >
               Listen Now
             </button>
             <button
-              onClick={() => setGeneratedSong(null)}
+              onClick={() => generateMutation.reset()}
               className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
             >
               Close
