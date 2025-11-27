@@ -11,6 +11,7 @@ import { MySongsPage } from './pages/MySongsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SongPlayerPage } from './pages/SongPlayerPage'
+import { SharedSongPage } from './pages/SharedSongPage'
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
         <Route path="/dashboard/settings" element={<SettingsPage />} />
         <Route path="/dashboard/profile" element={<ProfilePage />} />
         <Route path="/song/:songId" element={<SongPlayerPage />} />
+        <Route path="/share/:shareToken" element={<SharedSongPage />} />
       </Routes>
     </div>
   )
