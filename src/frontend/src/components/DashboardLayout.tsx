@@ -28,7 +28,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { id: 'home', label: 'Home', icon: HomeIcon, path: '/dashboard' },
     { id: 'news', label: 'News', icon: NewspaperIcon, path: '/dashboard/news' },
     { id: 'calendar', label: 'Calendar', icon: CalendarIcon, path: '/dashboard/calendar' },
-    { id: 'songs', label: 'My Songs', icon: MusicalNoteIcon, path: '/dashboard/songs' },
+    { id: 'songs', label: 'My Music', icon: MusicalNoteIcon, path: '/dashboard/songs' },
     { id: 'settings', label: 'Settings', icon: Cog6ToothIcon, path: '/dashboard/settings' },
     { id: 'profile', label: 'Profile', icon: UserCircleIcon, path: '/dashboard/profile' }
   ]
