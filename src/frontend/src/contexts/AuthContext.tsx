@@ -60,6 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           // Check if user has completed onboarding (use maybeSingle instead of single)
           console.log('📊 Fetching user profile...')
+          console.log('📊 User ID:', session.user.id)
+          console.log('📊 Supabase URL:', import.meta.env.VITE_SUPABASE_URL)
           
           const { data: profile, error } = await supabase
             .from('user_profiles')
@@ -68,10 +70,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .maybeSingle()
 
           console.log('📊 Profile result:', { profile, error })
+          console.log('📊 Profile data:', profile)
+          console.log('📊 Profile error:', error)
 
           if (error) {
             console.error('❌ Error fetching user profile:', error)
-            // On error, redirect to onboarding
+            
+            // If table doesn't exist or RLS blocks, create profile via backend
+            if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+              console.log('⚠️ Profile table issue, redirecting to onboarding to create profile')
+              setIsFirstLogin(true)
+              navigate('/onboarding')
+              return
+            }
+            
+            // On other errors, redirect to onboarding
             setIsFirstLogin(true)
             console.log('➡️ Redirecting to onboarding (error)')
             navigate('/onboarding')
