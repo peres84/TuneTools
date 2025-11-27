@@ -8,7 +8,7 @@
 ### @date 2025
 #############################################################################
 """
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form
 from typing import Optional
 import time
 from datetime import datetime
@@ -49,7 +49,9 @@ song_service = SongGenerationService()
 )
 async def generate_song(
     request: Request,
-    location: Optional[str] = None,
+    location: Optional[str] = Form(None),
+    custom_title: Optional[str] = Form(None),
+    custom_cover: Optional[UploadFile] = File(None),
     user_id: str = Depends(get_current_user)
 ):
     """
@@ -57,7 +59,7 @@ async def generate_song(
     
     This is the main orchestration endpoint that:
     1. Aggregates context data (news, weather, calendar)
-    2. Generates lyrics and genre tags via LLM
+    2. Generates lyrics and genre tags via LLM (or uses custom title)
     3. Gets or creates weekly album
     4. Generates album artwork (only for new albums)
     5. Generates song audio via RunPod
@@ -85,26 +87,42 @@ async def generate_song(
         log_handler.info(f"  - News: {len(context_data.get('news', []))} articles")
         log_handler.info(f"  - Calendar: {len(context_data.get('calendar', []))} activities")
         
-        # Step 2: Generate lyrics and genre tags
-        log_handler.info("[AI] Step 2: Generating lyrics and genre tags...")
-        song_content = llm_service.generate_song_content(
-            weather_data=context_data.get('weather', {}),
-            news_articles=context_data.get('news', []),
-            calendar_activities=context_data.get('calendar', []),
-            user_preferences=context_data.get('user_preferences', {})
-        )
+        # Step 2: Generate lyrics and genre tags (or use custom title)
+        if custom_title:
+            log_handler.info(f"[AI] Step 2: Using custom title: {custom_title}")
+            song_content = llm_service.generate_song_content(
+                weather_data=context_data.get('weather', {}),
+                news_articles=context_data.get('news', []),
+                calendar_activities=context_data.get('calendar', []),
+                user_preferences=context_data.get('user_preferences', {}),
+                custom_title=custom_title
+            )
+        else:
+            log_handler.info("[AI] Step 2: Generating lyrics and genre tags...")
+            song_content = llm_service.generate_song_content(
+                weather_data=context_data.get('weather', {}),
+                news_articles=context_data.get('news', []),
+                calendar_activities=context_data.get('calendar', []),
+                user_preferences=context_data.get('user_preferences', {})
+            )
         log_handler.info(f"[AI] [OK] Song content generated:")
         log_handler.info(f"  - Title: {song_content['title']}")
         log_handler.info(f"  - Description: {song_content['description']}")
         log_handler.info(f"  - Genre Tags: {song_content['genre_tags']}")
         log_handler.info(f"  - Lyrics Preview: {song_content['lyrics'][:100]}...")
         
-        # Step 3: Get or create weekly album
+        # Step 3: Get or create weekly album (with optional custom cover)
         log_handler.info("[ALBUM] Step 3: Getting weekly album...")
+        custom_cover_data = None
+        if custom_cover:
+            log_handler.info("[ALBUM] Using custom cover image")
+            custom_cover_data = await custom_cover.read()
+        
         album, image_generation_failed = album_service.get_or_create_weekly_album(
             user_id=user_id,
             song_themes=[song_content['title']],
-            user_preferences=context_data.get('user_preferences', {})
+            user_preferences=context_data.get('user_preferences', {}),
+            custom_cover_data=custom_cover_data
         )
         log_handler.info(f"[ALBUM] [OK] Album ready: {album.name}")
         log_handler.info(f"  - Album ID: {album.id}")

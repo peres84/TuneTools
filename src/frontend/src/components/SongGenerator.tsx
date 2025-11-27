@@ -22,6 +22,9 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
   const { session } = useAuth()
   const queryClient = useQueryClient()
   const [statusMessage, setStatusMessage] = useState<string>('')
+  const [customTitle, setCustomTitle] = useState<string>('')
+  const [customCover, setCustomCover] = useState<File | null>(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Query to fetch today's song (cached)
   const { data: todaySong, isLoading: checkingToday } = useQuery({
@@ -59,15 +62,23 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
 
       setStatusMessage('Gathering your daily context (news, weather, calendar)...')
       
+      // Use FormData for file upload
+      const formData = new FormData()
+      if (customTitle) {
+        formData.append('custom_title', customTitle)
+      }
+      if (customCover) {
+        formData.append('custom_cover', customCover)
+      }
+      
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/songs/generate`,
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`
           },
-          body: JSON.stringify({})
+          body: formData
         }
       )
 
@@ -141,8 +152,8 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
 
       {/* Generation Button */}
       {!todaySong && !generateMutation.data && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
-          <div className="mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+          <div className="text-center mb-6">
             <SparklesIcon className="w-16 h-16 mx-auto text-brand-primary mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               Generate Your Daily Song
@@ -152,26 +163,84 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
             </p>
           </div>
 
-          <button
-            onClick={handleGenerateSong}
-            disabled={generateMutation.isPending || checkingToday}
-            className="px-8 py-4 bg-brand-primary text-white text-lg font-semibold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 mx-auto"
-          >
-            {generateMutation.isPending || checkingToday ? (
-              <>
-                <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                {checkingToday ? 'Checking...' : 'Generating...'}
-              </>
-            ) : (
-              <>
-                <MusicalNoteIcon className="w-6 h-6" />
-                Generate Song
-              </>
-            )}
-          </button>
+          {/* Advanced Options Toggle */}
+          <div className="mb-6 text-center">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              disabled={generateMutation.isPending || checkingToday}
+              className="text-brand-primary hover:text-brand-primary/80 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {showAdvanced ? '▼ Hide' : '▶ Show'} Advanced Options (Optional)
+            </button>
+          </div>
+
+          {/* Advanced Options */}
+          {showAdvanced && (
+            <div className="mb-6 space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Custom Song Title (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  disabled={generateMutation.isPending || checkingToday}
+                  placeholder="Leave empty for AI-generated title"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Custom Album Cover (Optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setCustomCover(e.target.files?.[0] || null)}
+                  disabled={generateMutation.isPending || checkingToday}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-primary file:text-white hover:file:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                {customCover && (
+                  <div className="mt-2 flex items-center justify-between">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Selected: {customCover.name}
+                    </p>
+                    <button
+                      onClick={() => setCustomCover(null)}
+                      disabled={generateMutation.isPending || checkingToday}
+                      className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="text-center">
+            <button
+              onClick={handleGenerateSong}
+              disabled={generateMutation.isPending || checkingToday}
+              className="px-8 py-4 bg-brand-primary text-white text-lg font-semibold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-3"
+            >
+              {generateMutation.isPending || checkingToday ? (
+                <>
+                  <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {checkingToday ? 'Checking...' : 'Generating...'}
+                </>
+              ) : (
+                <>
+                  <MusicalNoteIcon className="w-6 h-6" />
+                  Generate Song
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 

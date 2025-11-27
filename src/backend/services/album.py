@@ -58,7 +58,8 @@ class AlbumService:
         user_id: str,
         song_themes: List[str],
         user_preferences: Dict[str, Any],
-        date: Optional[datetime] = None
+        date: Optional[datetime] = None,
+        custom_cover_data: Optional[bytes] = None
     ) -> tuple[Album, bool]:
         """
         Get existing weekly album or create new one
@@ -92,7 +93,8 @@ class AlbumService:
             week_start,
             week_end,
             song_themes,
-            user_preferences
+            user_preferences,
+            custom_cover_data
         )
         return album, image_failed
     
@@ -120,21 +122,27 @@ class AlbumService:
         week_start: datetime,
         week_end: datetime,
         song_themes: List[str],
-        user_preferences: Dict[str, Any]
+        user_preferences: Dict[str, Any],
+        custom_cover_data: Optional[bytes] = None
     ) -> tuple[Album, bool]:
         """Create new weekly album with artwork and vinyl disk"""
         
         # Generate album name
         album_name = f"Week of {week_start.strftime('%B %d, %Y')}"
         
-        # Generate album artwork
-        print("[IMAGE] Generating album artwork...")
-        artwork_data, image_failed = self.image_service.generate_album_artwork(
-            week_start=week_start.date().isoformat(),
-            week_end=week_end.date().isoformat(),
-            song_themes=song_themes,
-            user_preferences=user_preferences
-        )
+        # Use custom cover or generate artwork
+        if custom_cover_data:
+            print("[IMAGE] Using custom cover image")
+            artwork_data = custom_cover_data
+            image_failed = False
+        else:
+            print("[IMAGE] Generating album artwork...")
+            artwork_data, image_failed = self.image_service.generate_album_artwork(
+                week_start=week_start.date().isoformat(),
+                week_end=week_end.date().isoformat(),
+                song_themes=song_themes,
+                user_preferences=user_preferences
+            )
         
         # Transform to vinyl disk
         print("[MUSIC] Creating vinyl disk...")
@@ -194,12 +202,30 @@ class AlbumService:
         print(f"📤 Uploading vinyl disk to storage: {filename}")
         
         try:
-            # Upload to vinyl_disks bucket
-            response = supabase.storage.from_("vinyl_disks").upload(
-                filename,
-                vinyl_data,
-                file_options={"content-type": "image/png"}
-            )
+            # Try to upload, if file exists, remove it first and re-upload
+            try:
+                response = supabase.storage.from_("vinyl_disks").upload(
+                    filename,
+                    vinyl_data,
+                    file_options={"content-type": "image/png"}
+                )
+            except Exception as upload_error:
+                # If file already exists (409 Duplicate), remove and retry
+                if "already exists" in str(upload_error).lower() or "409" in str(upload_error):
+                    print(f"[WARN] File exists, removing and re-uploading: {filename}")
+                    try:
+                        supabase.storage.from_("vinyl_disks").remove([filename])
+                    except:
+                        pass  # Ignore if removal fails
+                    
+                    # Retry upload
+                    response = supabase.storage.from_("vinyl_disks").upload(
+                        filename,
+                        vinyl_data,
+                        file_options={"content-type": "image/png"}
+                    )
+                else:
+                    raise upload_error
             
             # Get public URL
             public_url = supabase.storage.from_("vinyl_disks").get_public_url(filename)

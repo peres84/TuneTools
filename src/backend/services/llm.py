@@ -46,7 +46,8 @@ class LLMService:
         weather_data: Dict[str, Any],
         news_articles: list,
         calendar_activities: list,
-        user_preferences: Dict[str, Any]
+        user_preferences: Dict[str, Any],
+        custom_title: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate song lyrics and genre tags from context
@@ -56,6 +57,7 @@ class LLMService:
             news_articles: List of news articles
             calendar_activities: List of calendar events
             user_preferences: User's music preferences
+            custom_title: Optional custom title to use instead of generating one
             
         Returns:
             dict: {
@@ -70,7 +72,8 @@ class LLMService:
             weather_data,
             news_articles,
             calendar_activities,
-            user_preferences
+            user_preferences,
+            custom_title
         )
         
         # Try OpenAI first
@@ -101,9 +104,12 @@ class LLMService:
         weather_data: Dict[str, Any],
         news_articles: list,
         calendar_activities: list,
-        user_preferences: Dict[str, Any]
+        user_preferences: Dict[str, Any],
+        custom_title: Optional[str] = None
     ) -> str:
-        """Build prompt for LLM following YuE guidelines"""
+        """Build prompt for LLM following YuE guidelines with optional custom title"""
+        
+        title_instruction = f'Use this exact title: "{custom_title}"' if custom_title else "Generate a creative, catchy title"
         
         # Format context
         weather_summary = f"{weather_data.get('weather_condition', 'clear')}, {weather_data.get('temp_c', 20)}°C"
@@ -141,7 +147,7 @@ GENERATE (JSON format):
 {{
     "genre_tags": "5-component tag string",
     "lyrics": "Complete lyrics with [verse] and [chorus] sections",
-    "title": "Song title (max 50 characters)",
+    "title": "{title_instruction}",
     "description": "One sentence about the song (max 100 characters)"
 }}
 
