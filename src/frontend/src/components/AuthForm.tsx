@@ -55,12 +55,16 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
+        console.log('📝 Starting signup process...')
+        
         // Check if email already exists
         try {
+          console.log('🔍 Checking if email exists...')
           const response = await fetch(
             `${import.meta.env.VITE_API_BASE_URL}/api/user/check-email?email=${encodeURIComponent(email)}`
           )
           const data = await response.json()
+          console.log('📊 Email check result:', data)
           
           if (data.exists) {
             if (data.confirmed) {
@@ -74,34 +78,44 @@ export function AuthForm({ mode }: AuthFormProps) {
             }
           }
         } catch (emailCheckError) {
-          console.error('Email check failed:', emailCheckError)
+          console.error('❌ Email check failed:', emailCheckError)
           // Continue with signup if check fails (don't block user)
         }
 
+        console.log('📧 Calling signUp function...')
         const { error } = await signUp(email, password)
+        console.log('📬 SignUp result:', { error })
+        
         if (error) {
+          console.error('❌ SignUp error:', error.message)
           setError(error.message)
         } else {
+          console.log('✅ SignUp successful! Setting success state...')
           // Signup successful - show email confirmation message
           setSuccess(true)
         }
       } else {
+        console.log('🔑 Starting login process...')
         const { error } = await signIn(email, password)
+        console.log('🔓 Login result:', { error })
+        
         if (error) {
+          console.error('❌ Login error:', error.message)
           // Provide helpful error messages for login
           let errorMessage = error.message
           
           // Check for common login errors
-          if (error.message.includes('Invalid login credentials') || 
-              error.message.includes('Invalid email or password')) {
-            errorMessage = 'Invalid email or password. Please ensure you have signed up and confirmed your email.'
+          if (error.message.includes('Invalid login credentials')) {
+            errorMessage = 'Invalid email or password. If you just signed up, please check your email and click the confirmation link first.'
           } else if (error.message.includes('Email not confirmed')) {
-            errorMessage = 'Please check your email and click the confirmation link before signing in.'
+            errorMessage = 'Please check your email and click the confirmation link before logging in.'
           } else if (error.message.includes('User not found')) {
             errorMessage = 'No account found with this email. Please sign up first.'
           }
           
           setError(errorMessage)
+        } else {
+          console.log('✅ Login successful!')
         }
       }
     } catch (err) {

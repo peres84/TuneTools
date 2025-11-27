@@ -44,6 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN' && session?.user) {
         console.log('🔐 User signed in, checking onboarding status...')
         
+        // Check if email is confirmed
+        if (!session.user.email_confirmed_at) {
+          console.log('❌ Email not confirmed, signing out...')
+          await supabase.auth.signOut()
+          return
+        }
+        
         // Don't redirect if already on onboarding or dashboard
         if (location.pathname === '/onboarding' || location.pathname === '/dashboard') {
           console.log('✅ Already on correct page, skipping redirect')
@@ -51,30 +58,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         try {
-          // Check if user has completed onboarding
+          // Check if user has completed onboarding (use maybeSingle instead of single)
+          console.log('📊 Fetching user profile...')
+          
           const { data: profile, error } = await supabase
             .from('user_profiles')
             .select('onboarding_completed')
             .eq('id', session.user.id)
-            .single()
+            .maybeSingle()
+
+          console.log('📊 Profile result:', { profile, error })
 
           if (error) {
-            console.error('Error fetching user profile:', error)
-            // If profile doesn't exist, redirect to onboarding
+            console.error('❌ Error fetching user profile:', error)
+            // On error, redirect to onboarding
             setIsFirstLogin(true)
-            console.log('➡️ Redirecting to onboarding (profile not found)')
+            console.log('➡️ Redirecting to onboarding (error)')
             navigate('/onboarding')
-          } else if (!profile || !profile.onboarding_completed) {
+          } else if (!profile) {
+            // Profile doesn't exist yet - first time login
+            setIsFirstLogin(true)
+            console.log('➡️ Redirecting to onboarding (no profile)')
+            navigate('/onboarding')
+          } else if (!profile.onboarding_completed) {
+            // Profile exists but onboarding not completed
             setIsFirstLogin(true)
             console.log('➡️ Redirecting to onboarding (not completed)')
             navigate('/onboarding')
           } else {
+            // Onboarding completed - go to dashboard
             console.log('➡️ Redirecting to dashboard (onboarding completed)')
             navigate('/dashboard')
           }
         } catch (err) {
-          console.error('Error in auth state change:', err)
-          // On error, assume first login
+          console.error('❌ Error in auth state change:', err)
+          // On error, redirect to onboarding
           setIsFirstLogin(true)
           navigate('/onboarding')
         }
@@ -92,30 +110,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sign up method
   const signUp = async (email: string, password: string) => {
     try {
+      console.log('🔐 Starting sign up process for:', email)
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
       })
 
+      console.log('📧 Supabase signUp response:', { data, error })
+
       if (error) {
+        console.error('❌ Sign up error:', error)
         return { error }
       }
 
       // Create user profile (if trigger doesn't work)
       if (data.user) {
-        try {
-          await supabase.from('user_profiles').insert({
+        console.log('✅ User created:', data.user.id)
+        
+        // Don't wait for profile creation - let it happen in background
+        // The database trigger should handle this anyway
+        Promise.resolve(
+          supabase.from('user_profiles').insert({
             id: data.user.id,
             onboarding_completed: false,
           })
-        } catch (profileError) {
+        ).then(({ error: profileError }) => {
+          if (profileError) {
+            console.log('⚠️ Profile creation error (may already exist):', profileError.message)
+          } else {
+            console.log('✅ User profile created')
+          }
+        }).catch(() => {
           // Profile might already exist from trigger, ignore error
-          console.log('Profile creation skipped (may already exist from trigger)')
-        }
+          console.log('⚠️ Profile creation skipped (may already exist from trigger)')
+        })
       }
 
+      console.log('✅ Sign up completed successfully')
       return { error: null }
     } catch (error) {
+      console.error('❌ Unexpected sign up error:', error)
       return { error: error as AuthError }
     }
   }
@@ -123,13 +158,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Log in method
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('🔐 Starting Log in process for:', email)
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
+      console.log('📧 Supabase signIn response:', { data, error })
+
+      if (error) {
+        console.error('❌ Sign in error:', error)
+      } else {
+        console.log('✅ Sign in successful')
+      }
+
       return { error }
     } catch (error) {
+      console.error('❌ Unexpected sign in error:', error)
       return { error: error as AuthError }
     }
   }
