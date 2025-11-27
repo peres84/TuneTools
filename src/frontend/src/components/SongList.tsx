@@ -1,5 +1,11 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MusicalNoteIcon, ClockIcon, CalendarIcon } from '@heroicons/react/24/outline'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../contexts/AuthContext'
+import { MusicalNoteIcon, ClockIcon, CalendarIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { OptionsMenu } from './OptionsMenu'
+import { EditModal } from './EditModal'
+import { ConfirmModal } from './ConfirmModal'
 
 interface Song {
   id: string
@@ -18,10 +24,59 @@ interface SongListProps {
 
 export function SongList({ songs, albumName }: SongListProps) {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const queryClient = useQueryClient()
+  const [editingSong, setEditingSong] = useState<Song | null>(null)
+  const [deletingSong, setDeletingSong] = useState<Song | null>(null)
 
   const handleSongClick = (songId: string) => {
     navigate(`/song/${songId}`)
   }
+
+  // Update song mutation
+  const updateSongMutation = useMutation({
+    mutationFn: async ({ songId, title, description }: { songId: string; title?: string; description?: string }) => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/songs/${songId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({ title, description })
+        }
+      )
+      if (!response.ok) throw new Error('Failed to update song')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allSongs'] })
+      queryClient.invalidateQueries({ queryKey: ['album'] })
+    }
+  })
+
+  // Delete song mutation
+  const deleteSongMutation = useMutation({
+    mutationFn: async (songId: string) => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/songs/${songId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`
+          }
+        }
+      )
+      if (!response.ok) throw new Error('Failed to delete song')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allSongs'] })
+      queryClient.invalidateQueries({ queryKey: ['album'] })
+      queryClient.invalidateQueries({ queryKey: ['albums'] })
+    }
+  })
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -70,7 +125,7 @@ export function SongList({ songs, albumName }: SongListProps) {
             {/* Song Card Header */}
             <div className="bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 dark:from-brand-primary/20 dark:to-brand-secondary/20 p-6 group-hover:from-brand-primary/20 group-hover:to-brand-secondary/20 transition-all">
               <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 line-clamp-2 group-hover:text-brand-primary transition-colors">
                     {song.title}
                   </h3>
@@ -78,7 +133,26 @@ export function SongList({ songs, albumName }: SongListProps) {
                     {song.description}
                   </p>
                 </div>
-                <MusicalNoteIcon className="w-8 h-8 text-brand-primary flex-shrink-0 ml-2 group-hover:scale-110 transition-transform" />
+                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                  <MusicalNoteIcon className="w-8 h-8 text-brand-primary group-hover:scale-110 transition-transform" />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <OptionsMenu
+                      items={[
+                        {
+                          label: 'Rename Song',
+                          icon: <PencilIcon className="w-5 h-5" />,
+                          onClick: () => setEditingSong(song)
+                        },
+                        {
+                          label: 'Delete Song',
+                          icon: <TrashIcon className="w-5 h-5" />,
+                          onClick: () => setDeletingSong(song),
+                          variant: 'danger'
+                        }
+                      ]}
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Genre Tags */}
@@ -118,6 +192,40 @@ export function SongList({ songs, albumName }: SongListProps) {
           </div>
         ))}
       </div>
+
+      {/* Edit Song Modal */}
+      <EditModal
+        isOpen={!!editingSong}
+        onClose={() => setEditingSong(null)}
+        onSave={(title) => {
+          if (editingSong) {
+            updateSongMutation.mutate({ 
+              songId: editingSong.id, 
+              title,
+              description: editingSong.description 
+            })
+          }
+        }}
+        title="Rename Song"
+        label="Song Title"
+        initialValue={editingSong?.title || ''}
+        placeholder="Enter song title"
+      />
+
+      {/* Delete Song Confirmation */}
+      <ConfirmModal
+        isOpen={!!deletingSong}
+        onClose={() => setDeletingSong(null)}
+        onConfirm={() => {
+          if (deletingSong) {
+            deleteSongMutation.mutate(deletingSong.id)
+          }
+        }}
+        title="Delete Song"
+        message={`Are you sure you want to delete "${deletingSong?.title}"? This action cannot be undone.`}
+        confirmText="Delete Song"
+        confirmVariant="danger"
+      />
     </div>
   )
 }

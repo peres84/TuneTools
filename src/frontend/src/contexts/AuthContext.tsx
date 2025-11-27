@@ -23,6 +23,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Token refresh watchdog - refreshes at 90% of expiry time
+  useEffect(() => {
+    if (!session) return
+
+    const expiresAt = session.expires_at
+    if (!expiresAt) return
+
+    const expiresInMs = (expiresAt * 1000) - Date.now()
+    const refreshAt = expiresInMs * 0.9 // Refresh at 90% of expiry time
+
+    console.log(`🔄 Token refresh scheduled in ${Math.round(refreshAt / 1000 / 60)} minutes`)
+
+    const refreshTimer = setTimeout(async () => {
+      console.log('🔄 Refreshing access token...')
+      const { data, error } = await supabase.auth.refreshSession()
+      
+      if (error) {
+        console.error('❌ Token refresh failed:', error)
+        // If refresh fails, sign out user
+        await supabase.auth.signOut()
+      } else if (data.session) {
+        console.log('✅ Token refreshed successfully')
+        setSession(data.session)
+        setUser(data.session.user)
+      }
+    }, refreshAt)
+
+    return () => clearTimeout(refreshTimer)
+  }, [session])
+
   // Session restoration on app load
   useEffect(() => {
     // Get initial session from localStorage
