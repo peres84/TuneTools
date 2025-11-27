@@ -123,9 +123,9 @@ class LLMService:
         vocal_preference = user_preferences.get('vocal_preference', 'female')
         mood_preference = user_preferences.get('mood_preference', 'uplifting')
         
-        prompt = f"""Create a personalized daily song based on today's context.
+        prompt = f"""You are a music producer creating a personalized daily news song using YuE music generation.
 
-CONTEXT:
+TODAY'S CONTEXT:
 Weather: {weather_summary}
 Top News:
 {news_summary}
@@ -133,48 +133,66 @@ Schedule:
 {calendar_summary}
 
 User Preferences:
-- Genres: {', '.join(preferred_genres)}
-- Vocal: {vocal_preference}
-- Mood: {mood_preference}
+- Favorite Genres: {', '.join(preferred_genres)}
+- Vocal Preference: {vocal_preference}
+- Mood Preference: {mood_preference}
 
-GENERATE (in JSON format):
+GENERATE (JSON format):
 {{
-    "genre_tags": "5-component tag string for YuE music generation",
+    "genre_tags": "5-component tag string",
     "lyrics": "Complete lyrics with [verse] and [chorus] sections",
     "title": "Song title (max 50 characters)",
     "description": "One sentence about the song (max 100 characters)"
 }}
 
-REQUIREMENTS FOR GENRE TAGS:
-- Must include 5 components (space-separated): genre, instrument, mood, gender, timbre
-- Use YuE-friendly tags from: pop, rock, electronic, folk, indie, acoustic, jazz, r&b
-- Mood tags: uplifting, energetic, calm, inspiring, melancholic, motivational
-- Vocal tags: bright vocal, airy vocal, warm vocal, smooth vocal, powerful vocal
-- Gender: male, female, neutral
-- Example: "uplifting female energetic indie-pop bright vocal electronic inspiring"
+GENRE TAGS REQUIREMENTS (CRITICAL):
+A stable tagging prompt consists of EXACTLY 5 components (space-separated):
+1. GENRE: Main style (pop, rock, electronic, folk, indie, jazz, r&b, hip-hop, country, blues, ambient)
+2. INSTRUMENT: Key instruments (acoustic, electronic, guitar, piano, drums, synth)
+3. MOOD: Emotional tone (uplifting, energetic, calm, inspiring, melancholic, motivational, relaxed)
+4. GENDER: Vocal type (male, female, neutral)
+5. TIMBRE: Vocal quality (bright vocal, airy vocal, warm vocal, smooth vocal, powerful vocal)
 
-REQUIREMENTS FOR LYRICS:
-- Structure: [verse] section followed by [chorus] section
-- Verse: Maximum 8 lines
-- Chorus: Maximum 6 lines
-- Each section should be ~30 seconds when sung
-- Separate sections with double newline (\\n\\n)
+Order is flexible. You can repeat important descriptors for emphasis.
+Use ONLY tags from YuE's top 200 most common tags for stability.
+
+GOOD Examples:
+- "uplifting female energetic indie-pop bright vocal electronic inspiring"
+- "calm male acoustic folk warm vocal gentle soothing"
+- "energetic female rock guitar driven powerful vocal dynamic"
+
+BAD Examples:
+- "happy song" (too vague, not 5 components)
+- "death metal screaming chaos" (not YuE-friendly)
+
+LYRICS REQUIREMENTS (CRITICAL):
+- Structure: [verse] section, then [chorus] section
+- Verse: 6-8 lines maximum (NOT more)
+- Chorus: 4-6 lines maximum (NOT more)
+- Each section = ~30 seconds when sung (DON'T exceed this)
+- Separate sections with DOUBLE newline (\\n\\n)
 - Tell a story: weather → news → user's day → motivation
-- Make it personal and relevant to today's context
-- Keep language simple and singable
+- Keep language simple, singable, and conversational
+- Make it personal and relevant to TODAY
 
-Example format:
+CORRECT Format:
 [verse]
 Line 1 of verse
 Line 2 of verse
-...
+Line 3 of verse
+Line 4 of verse
 
 [chorus]
 Line 1 of chorus
 Line 2 of chorus
-...
+Line 3 of chorus
+Line 4 of chorus
 
-Return ONLY valid JSON, no additional text."""
+IMPORTANT:
+- Return ONLY valid JSON, no markdown, no code blocks
+- Don't put too many words in a single line
+- Keep it under 30 seconds per section
+- Make it sound natural when sung"""
 
         return prompt
     
