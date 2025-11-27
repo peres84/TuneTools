@@ -356,26 +356,33 @@ async def get_today_song(user_id: str = Depends(get_current_user)):
         user_id: Authenticated user ID
         
     Returns:
-        Song or None
+        Song or None if no song exists for today
     """
     try:
-        today = datetime.now().date().isoformat()
+        # Get today's date at midnight
+        today = datetime.now().date()
+        today_start = datetime.combine(today, datetime.min.time()).isoformat()
         
+        # Query for songs created today
         response = (
             supabase.table("songs")
             .select("*")
             .eq("user_id", user_id)
-            .gte("created_at", today)
-            .single()
+            .gte("created_at", today_start)
+            .limit(1)
             .execute()
         )
         
-        if response.data:
-            return Song(**response.data)
-        else:
-            return None
+        # Return the first song if it exists
+        if response.data and len(response.data) > 0:
+            return Song(**response.data[0])
+        
+        # Return None if no song for today (this is valid, not an error)
+        return None
             
-    except Exception:
+    except Exception as e:
+        print(f"Error fetching today's song: {str(e)}")
+        # Return None instead of raising error - no song today is valid
         return None
 
 

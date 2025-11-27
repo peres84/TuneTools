@@ -45,8 +45,14 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
 
       if (response.ok) {
         const song = await response.json()
-        setTodaySong(song)
-        return true
+        // Check if song is null (no song for today)
+        if (song && song.id) {
+          setTodaySong(song)
+          return true
+        }
+        // No song for today - this is normal
+        setTodaySong(null)
+        return false
       }
       return false
     } catch (err) {
@@ -92,27 +98,18 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       )
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to generate song')
+        let errorMessage = 'Failed to generate song'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.detail || errorMessage
+        } catch {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`
+        }
+        throw new Error(errorMessage)
       }
 
-      // For long-running operations, we might want to poll for status
-      // For now, we'll show progress messages
       setStatusMessage('Generating lyrics and music tags...')
       
-      // Simulate progress updates (in production, use WebSocket or polling)
-      setTimeout(() => {
-        setStatusMessage('Creating your unique song with AI...')
-      }, 2000)
-      
-      setTimeout(() => {
-        setStatusMessage('Generating album artwork...')
-      }, 5000)
-      
-      setTimeout(() => {
-        setStatusMessage('Almost done! Finalizing your song...')
-      }, 8000)
-
       const song = await response.json()
       
       setGeneratedSong(song)
@@ -123,6 +120,7 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       }
 
     } catch (err) {
+      console.error('Song generation error:', err)
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
       setError(errorMessage)
       setStatusMessage('')
