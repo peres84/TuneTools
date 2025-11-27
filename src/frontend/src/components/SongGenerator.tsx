@@ -18,6 +18,10 @@ interface SongGeneratorProps {
   onGenerationComplete?: (song: Song) => void
 }
 
+const MUSIC_GENRES = ['pop', 'rock', 'jazz', 'classical', 'electronic', 'indie', 'hiphop', 'country']
+const VOCAL_PREFERENCES = ['male', 'female', 'neutral']
+const MOOD_PREFERENCES = ['uplifting', 'calm', 'energetic', 'melancholic']
+
 export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
   const { session } = useAuth()
   const queryClient = useQueryClient()
@@ -25,6 +29,11 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
   const [customTitle, setCustomTitle] = useState<string>('')
   const [customCover, setCustomCover] = useState<File | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  
+  // Preference overrides (temporary, only for this generation)
+  const [overrideGenres, setOverrideGenres] = useState<string[]>([])
+  const [overrideVocal, setOverrideVocal] = useState<string>('')
+  const [overrideMood, setOverrideMood] = useState<string>('')
 
   // Query to fetch today's song (cached)
   const { data: todaySong, isLoading: checkingToday } = useQuery({
@@ -69,6 +78,16 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       }
       if (customCover) {
         formData.append('custom_cover', customCover)
+      }
+      // Add preference overrides if provided
+      if (overrideGenres.length > 0) {
+        formData.append('override_genres', JSON.stringify(overrideGenres))
+      }
+      if (overrideVocal) {
+        formData.append('override_vocal', overrideVocal)
+      }
+      if (overrideMood) {
+        formData.append('override_mood', overrideMood)
       }
       
       const response = await fetch(
@@ -215,6 +234,84 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
                     </button>
                   </div>
                 )}
+              </div>
+              
+              {/* Preference Overrides */}
+              <div className="pt-4 border-t border-gray-300 dark:border-gray-600">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                  Override Preferences (Just for this song)
+                </h4>
+                
+                {/* Music Genres */}
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    Music Genres
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {MUSIC_GENRES.map((genre) => (
+                      <button
+                        key={genre}
+                        onClick={() => setOverrideGenres(prev => 
+                          prev.includes(genre) ? prev.filter(g => g !== genre) : [...prev, genre]
+                        )}
+                        disabled={generateMutation.isPending || checkingToday}
+                        className={`px-3 py-1 text-xs rounded-full border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                          overrideGenres.includes(genre)
+                            ? 'bg-brand-secondary text-white border-brand-secondary'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-brand-secondary'
+                        }`}
+                      >
+                        {genre}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Vocal Preference */}
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    Vocal Preference
+                  </label>
+                  <div className="flex gap-2">
+                    {VOCAL_PREFERENCES.map((vocal) => (
+                      <button
+                        key={vocal}
+                        onClick={() => setOverrideVocal(overrideVocal === vocal ? '' : vocal)}
+                        disabled={generateMutation.isPending || checkingToday}
+                        className={`flex-1 px-3 py-2 text-xs rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                          overrideVocal === vocal
+                            ? 'bg-brand-accent text-gray-900 border-brand-accent'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-brand-accent'
+                        }`}
+                      >
+                        {vocal}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Mood Preference */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    Mood Preference
+                  </label>
+                  <div className="flex gap-2">
+                    {MOOD_PREFERENCES.map((mood) => (
+                      <button
+                        key={mood}
+                        onClick={() => setOverrideMood(overrideMood === mood ? '' : mood)}
+                        disabled={generateMutation.isPending || checkingToday}
+                        className={`flex-1 px-3 py-2 text-xs rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                          overrideMood === mood
+                            ? 'bg-brand-primary text-white border-brand-primary'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-brand-primary'
+                        }`}
+                      >
+                        {mood}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}

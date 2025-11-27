@@ -52,6 +52,9 @@ async def generate_song(
     location: Optional[str] = Form(None),
     custom_title: Optional[str] = Form(None),
     custom_cover: Optional[UploadFile] = File(None),
+    override_genres: Optional[str] = Form(None),
+    override_vocal: Optional[str] = Form(None),
+    override_mood: Optional[str] = Form(None),
     user_id: str = Depends(get_current_user)
 ):
     """
@@ -82,6 +85,22 @@ async def generate_song(
         # Step 1: Aggregate context data
         log_handler.info("[DATA] Step 1: Aggregating context data...")
         context_data = await _aggregate_context_data(user_id, location)
+        
+        # Apply preference overrides if provided (temporary, just for this song)
+        if override_genres or override_vocal or override_mood:
+            log_handler.info("[OVERRIDE] Applying temporary preference overrides...")
+            user_prefs = context_data.get('user_preferences', {})
+            if override_genres:
+                import json
+                user_prefs['music_genres'] = json.loads(override_genres)
+                log_handler.info(f"  - Genres: {user_prefs['music_genres']}")
+            if override_vocal:
+                user_prefs['vocal_preference'] = override_vocal
+                log_handler.info(f"  - Vocal: {override_vocal}")
+            if override_mood:
+                user_prefs['mood_preference'] = override_mood
+                log_handler.info(f"  - Mood: {override_mood}")
+            context_data['user_preferences'] = user_prefs
         log_handler.info(f"[DATA] [OK] Context aggregated:")
         log_handler.info(f"  - Weather: {context_data.get('weather', {}).get('weather_condition', 'N/A')}, {context_data.get('weather', {}).get('temp_c', 'N/A')}°C")
         log_handler.info(f"  - News: {len(context_data.get('news', []))} articles")
