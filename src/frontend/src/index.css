@@ -7,3 +7,69 @@
     @apply bg-white dark:bg-brand-dark text-gray-900 dark:text-gray-100;
   }
 }
+
+/* Animated gradient background for song player */
+@keyframes waterGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 50% 100%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  75% {
+    background-position: 50% 0%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Wave animations */
+@keyframes wave1 {
+  0%, 100% {
+    background-position: 0% 0%, 100% 100%, 0% 50%;
+  }
+  50% {
+    background-position: 100% 100%, 0% 0%, 100% 50%;
+  }
+}
+
+@keyframes wave2 {
+  0%, 100% {
+    background-position: 100% 0%, 0% 100%, 50% 0%;
+  }
+  50% {
+    background-position: 0% 100%, 100% 0%, 50% 100%;
+  }
+}
+
+/* Vinyl disk rotation */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@layer utilities {
+  .animate-waterGradient {
+    animation: waterGradient 12s ease infinite;
+  }
+  
+  .animate-wave1 {
+    animation: wave1 8s ease-in-out infinite;
+  }
+  
+  .animate-wave2 {
+    animation: wave2 10s ease-in-out infinite reverse;
+  }
+  
+  .animate-spin-slow {
+    animation: spin-slow 3s linear infinite;
+  }
+}
