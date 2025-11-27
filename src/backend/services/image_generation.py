@@ -133,9 +133,9 @@ Visual elements:
         
         genai.configure(api_key=GEMINI_API_KEY)
         
-        # Use Gemini Pro Vision for image generation
+        # Use Gemini Pro for image generation
         # Note: Actual Imagen API may differ - adjust as needed
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         
         # For now, we'll use DALL-E style approach
         # Gemini Imagen API integration would go here

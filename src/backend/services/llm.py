@@ -198,7 +198,8 @@ Return ONLY valid JSON, no additional text."""
         import google.generativeai as genai
         
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Use gemini-pro for stable API access
+        model = genai.GenerativeModel('gemini-2.0-flash')
         
         response = model.generate_content(
             prompt,
