@@ -347,7 +347,7 @@
   - Redirect to dashboard after completion
   - _Requirements: 2.4, 2.5, 2.6, 2.7, 2.8_
 
-- [ ] 21. Implement dashboard layout component
+- [x] 21. Implement dashboard layout component
   - Create DashboardLayout component with sidebar
   - Add navigation tabs: Home, News, Calendar, My Songs, Settings, Profile
   - Implement responsive sidebar (hamburger menu on mobile)
