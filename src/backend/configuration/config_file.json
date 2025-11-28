@@ -126,11 +126,12 @@
         "max_tokens": 1500
     },
     "image_generation": {
-        "primary_provider": "gemini",
-        "fallback_provider": "openai",
-        "gemini_model": "gemini-2.0-flash",
+        "primary_provider": "openai",
+        "fallback_provider": "gemini",
+        "gemini_model": "imagen-3.0-generate-001",
         "openai_model": "dall-e-3",
-        "image_size": "1024x1024"
+        "image_size": "1024x1024",
+        "note": "Gemini image generation requires Vertex AI setup. OpenAI DALL-E is primary. If both fail, uses default assets."
     },
     "song_generation": {
         "runpod_timeout_seconds": 900,

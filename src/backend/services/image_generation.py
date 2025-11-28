@@ -134,26 +134,43 @@ Visual elements:
     
     def _generate_with_gemini(self, prompt: str) -> bytes:
         """
-        Generate image using Google Gemini Imagen
+        Generate image using Google Gemini via Imagen API
         
-        Note: Gemini's image generation API (Imagen) is currently in limited preview
-        and requires special access. For now, this raises NotImplementedError
-        to fallback to DALL-E or default assets.
+        Note: Gemini's standard API (gemini-2.0-flash) does NOT support image generation.
+        Image generation requires either:
+        1. Vertex AI Imagen API (requires GCP project setup)
+        2. Third-party image generation services
+        
+        For now, this will raise NotImplementedError to fallback to DALL-E or default assets.
         
         To enable Gemini image generation:
-        1. Get access to Imagen API from Google AI Studio
+        1. Set up Google Cloud Project with Vertex AI enabled
         2. Install: pip install google-cloud-aiplatform
-        3. Implement using Vertex AI Imagen endpoint
+        3. Configure authentication: gcloud auth application-default login
+        4. Use Vertex AI Imagen endpoint
+        
+        Example implementation:
+        ```python
+        from google.cloud import aiplatform
+        from vertexai.preview.vision_models import ImageGenerationModel
+        
+        aiplatform.init(project="your-project-id", location="us-central1")
+        model = ImageGenerationModel.from_pretrained("imagegeneration@006")
+        response = model.generate_images(
+            prompt=prompt,
+            number_of_images=1,
+            aspect_ratio="1:1"
+        )
+        image_bytes = response.images[0]._image_bytes
+        ```
         """
-        # Gemini Imagen requires Vertex AI and special access
-        # For production, implement using:
-        # from google.cloud import aiplatform
-        # aiplatform.init(project="your-project-id", location="us-central1")
-        # model = aiplatform.ImageGenerationModel.from_pretrained("imagegeneration@006")
-        # response = model.generate_images(prompt=prompt, number_of_images=1)
+        print("[WARN] Gemini image generation requires Vertex AI Imagen setup")
+        print("[INFO] Gemini text models (gemini-2.0-flash) cannot generate images")
+        print("[INFO] Falling back to DALL-E or default assets")
         
         raise NotImplementedError(
-            "Gemini Imagen API requires Vertex AI setup and special access. "
+            "Gemini Imagen API requires Vertex AI setup. "
+            "Standard Gemini models (gemini-2.0-flash) do not support image generation. "
             "Will fallback to DALL-E or default assets."
         )
     
