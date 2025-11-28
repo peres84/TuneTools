@@ -500,7 +500,7 @@
 - [x] 30. Final Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 31. Deploy Supabase using MCP integration
+- [x] 31. Deploy Supabase using MCP integration
   - Use MCP Supabase to deploy database schema
   - Run all migrations from `/supabase/migrations`
   - Configure storage buckets and RLS policies
