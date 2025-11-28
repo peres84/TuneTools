@@ -4,7 +4,7 @@ import { DashboardLayout } from '../components/DashboardLayout'
 import { NewspaperIcon, ClockIcon, ArrowTopRightOnSquareIcon, ExclamationTriangleIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { NewsSkeleton } from '../components/LoadingSkeletons'
 import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
-import { cacheManager } from '../utils/cacheManager'
+import { cacheManager, CACHE_KEYS } from '../utils/cacheManager'
 
 interface NewsArticle {
   title: string
@@ -24,7 +24,7 @@ export function NewsPage() {
       if (!session?.access_token) return null
 
       // Check cache first
-      const cached = cacheManager.get<{ categories: string[]; articles: NewsArticle[] }>('news_feed', 60)
+      const cached = cacheManager.get<{ categories: string[]; articles: NewsArticle[] }>(CACHE_KEYS.NEWS_FEED, 60)
       if (cached) {
         console.log('📰 Using cached news')
         return cached
@@ -49,7 +49,7 @@ export function NewsPage() {
       }
 
       // Cache the news for 60 minutes
-      cacheManager.set('news_feed', result, 60)
+      cacheManager.set(CACHE_KEYS.NEWS_FEED, result, 60)
 
       return result
     },
@@ -59,7 +59,7 @@ export function NewsPage() {
 
   const handleRefresh = () => {
     // Clear cache and refetch
-    cacheManager.remove('news_feed')
+    cacheManager.remove(CACHE_KEYS.NEWS_FEED)
     refetch()
   }
 

@@ -136,5 +136,7 @@ export const CACHE_KEYS = {
   SONGS_LIST: 'songs_list',
   ALBUMS_LIST: 'albums_list',
   USER_PROFILE: 'user_profile',
+  USER_STATS: 'user_stats',
   CALENDAR_ACTIVITIES: 'calendar_activities',
+  NEWS_FEED: 'news_feed',
 } as const

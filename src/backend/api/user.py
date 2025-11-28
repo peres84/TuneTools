@@ -10,6 +10,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Optional
 from uuid import UUID
+from datetime import datetime
 
 from models.user import (
     UserProfile,
@@ -359,4 +360,252 @@ async def get_user_news(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch news: {str(e)}"
+        )
+
+
+@router.get("/stats")
+@SlowLimiter.limit("20/minute")
+async def get_user_stats(
+    request: Request,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Get user statistics (songs count, albums count)
+    
+    Args:
+        user_id: Authenticated user ID
+        
+    Returns:
+        dict: {"songs_count": int, "albums_count": int}
+    """
+    try:
+        # Get songs count
+        songs_response = (
+            supabase.table("songs")
+            .select("id", count="exact")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        songs_count = songs_response.count or 0
+        
+        # Get albums count
+        albums_response = (
+            supabase.table("albums")
+            .select("id", count="exact")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        albums_count = albums_response.count or 0
+        
+        return {
+            "songs_count": songs_count,
+            "albums_count": albums_count
+        }
+        
+    except Exception as e:
+        log_handler.error(f"[ERROR] Failed to fetch user stats: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch user stats: {str(e)}"
+        )
+
+
+@router.post("/change-password")
+@SlowLimiter.limit("5/hour")
+async def change_password(
+    request: Request,
+    current_password: str,
+    new_password: str,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Change user password
+    
+    Args:
+        current_password: Current password for verification
+        new_password: New password
+        user_id: Authenticated user ID
+        
+    Returns:
+        dict: {"message": "Password changed successfully"}
+    """
+    try:
+        from supabase import create_client
+        import os
+        
+        # Create admin client
+        supabase_url = os.getenv("SUPABASE_URL")
+        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        
+        if not supabase_url or not service_role_key:
+            raise HTTPException(status_code=500, detail="Server configuration error")
+        
+        admin_client = create_client(supabase_url, service_role_key)
+        
+        # Validate new password
+        if len(new_password) < 8:
+            raise HTTPException(
+                status_code=400,
+                detail="New password must be at least 8 characters long"
+            )
+        
+        # Update password using admin API
+        admin_client.auth.admin.update_user_by_id(
+            user_id,
+            {"password": new_password}
+        )
+        
+        log_handler.info(f"[AUTH] Password changed for user {user_id}")
+        
+        return {"message": "Password changed successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_handler.error(f"[ERROR] Failed to change password: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to change password: {str(e)}"
+        )
+
+
+@router.get("/export-data")
+@SlowLimiter.limit("3/hour")
+async def export_user_data(
+    request: Request,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Export all user data (profile, preferences, songs, albums)
+    
+    Args:
+        user_id: Authenticated user ID
+        
+    Returns:
+        dict: Complete user data export
+    """
+    try:
+        # Get profile
+        profile_response = (
+            supabase.table("user_profiles")
+            .select("*")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        
+        # Get preferences
+        prefs_response = (
+            supabase.table("user_preferences")
+            .select("*")
+            .eq("user_id", user_id)
+            .single()
+            .execute()
+        )
+        
+        # Get all songs
+        songs_response = (
+            supabase.table("songs")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        
+        # Get all albums
+        albums_response = (
+            supabase.table("albums")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("week_start", desc=True)
+            .execute()
+        )
+        
+        export_data = {
+            "export_date": datetime.now().isoformat(),
+            "user_id": user_id,
+            "profile": profile_response.data,
+            "preferences": prefs_response.data,
+            "songs": songs_response.data,
+            "albums": albums_response.data,
+            "total_songs": len(songs_response.data),
+            "total_albums": len(albums_response.data)
+        }
+        
+        log_handler.info(f"[EXPORT] Data exported for user {user_id}")
+        
+        return export_data
+        
+    except Exception as e:
+        log_handler.error(f"[ERROR] Failed to export data: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to export data: {str(e)}"
+        )
+
+
+@router.delete("/account")
+@SlowLimiter.limit("2/hour")
+async def delete_account(
+    request: Request,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Permanently delete user account and all associated data
+    
+    This will delete:
+    - User profile
+    - User preferences
+    - All songs
+    - All albums
+    - Calendar integrations
+    - Auth account
+    
+    Args:
+        user_id: Authenticated user ID
+        
+    Returns:
+        dict: {"message": "Account deleted successfully"}
+    """
+    try:
+        from supabase import create_client
+        import os
+        
+        # Create admin client
+        supabase_url = os.getenv("SUPABASE_URL")
+        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        
+        if not supabase_url or not service_role_key:
+            raise HTTPException(status_code=500, detail="Server configuration error")
+        
+        admin_client = create_client(supabase_url, service_role_key)
+        
+        # Delete in order (respecting foreign key constraints)
+        # 1. Delete songs
+        supabase.table("songs").delete().eq("user_id", user_id).execute()
+        
+        # 2. Delete albums
+        supabase.table("albums").delete().eq("user_id", user_id).execute()
+        
+        # 3. Delete calendar integrations
+        supabase.table("calendar_integrations").delete().eq("user_id", user_id).execute()
+        
+        # 4. Delete preferences
+        supabase.table("user_preferences").delete().eq("user_id", user_id).execute()
+        
+        # 5. Delete profile
+        supabase.table("user_profiles").delete().eq("id", user_id).execute()
+        
+        # 6. Delete auth user
+        admin_client.auth.admin.delete_user(user_id)
+        
+        log_handler.info(f"[DELETE] Account deleted for user {user_id}")
+        
+        return {"message": "Account deleted successfully"}
+        
+    except Exception as e:
+        log_handler.error(f"[ERROR] Failed to delete account: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete account: {str(e)}"
         )
