@@ -71,7 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
 
       // Handle first login redirect to onboarding (only for session restoration, not manual login)
-      if (event === 'SIGNED_IN' && session?.user && location.pathname === '/') {
+      // Skip if we're on login/signup pages to avoid interfering with manual login
+      if (event === 'SIGNED_IN' && session?.user && location.pathname === '/' && !location.pathname.includes('/login') && !location.pathname.includes('/signup')) {
         console.log('🔐 Session restored, checking onboarding status...')
         
         // Check if email is confirmed
@@ -174,16 +175,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Set session
-      await supabase.auth.setSession({
+      console.log('🔄 Setting session in Supabase...')
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token
       })
 
-      console.log('✅ Sign in successful')
+      if (sessionError) {
+        console.error('❌ Session error:', sessionError)
+        return { error: { message: 'Failed to establish session. Please try again.' } as AuthError }
+      }
+
+      console.log('✅ Session set successfully:', sessionData)
       console.log('📊 Onboarding completed:', data.onboarding_completed)
 
       // Set first login flag based on onboarding status
       setIsFirstLogin(!data.onboarding_completed)
+
+      // Small delay to ensure session is fully set before navigation
+      await new Promise(resolve => setTimeout(resolve, 100))
 
       // Navigate immediately based on backend response (don't wait for auth state change)
       // Backend already checked onboarding status, so we can trust it
