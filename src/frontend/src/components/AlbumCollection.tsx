@@ -7,6 +7,7 @@ import { EditModal } from './EditModal'
 import { ConfirmModal } from './ConfirmModal'
 import { AlbumSkeleton } from './LoadingSkeletons'
 import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
+import { cacheManager, CACHE_KEYS } from '../utils/cacheManager'
 
 interface Album {
   id: string
@@ -36,6 +37,13 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
         throw new Error('Not authenticated')
       }
 
+      // Try localStorage cache first
+      const cached = cacheManager.get<Album[]>(CACHE_KEYS.ALBUMS_LIST, 30)
+      if (cached) {
+        return cached
+      }
+
+      // Fetch from API
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/albums/list`,
         {
@@ -49,7 +57,12 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
         throw new Error('Failed to fetch albums')
       }
 
-      return response.json() as Promise<Album[]>
+      const data = await response.json() as Album[]
+      
+      // Cache the response
+      cacheManager.set(CACHE_KEYS.ALBUMS_LIST, data, 30)
+
+      return data
     },
     enabled: !!session?.access_token,
     staleTime: Infinity, // Data never becomes stale automatically

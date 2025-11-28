@@ -218,6 +218,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
     setSession(null)
     setIsFirstLogin(false)
+    
+    // Clear all cached data on logout
+    const { cacheManager } = await import('../utils/cacheManager')
+    cacheManager.clearAll()
   }
 
   return (

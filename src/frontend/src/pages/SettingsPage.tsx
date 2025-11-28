@@ -5,6 +5,7 @@ import { DashboardLayout } from '../components/DashboardLayout'
 import { Cog6ToothIcon, ExclamationTriangleIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { SettingsSkeleton } from '../components/LoadingSkeletons'
 import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
+import { cacheManager, CACHE_KEYS } from '../utils/cacheManager'
 
 const CATEGORIES = [
   { id: 'technology', label: 'Technology', icon: '💻' },
@@ -35,12 +36,45 @@ export function SettingsPage() {
   const [musicGenres, setMusicGenres] = useState<string[]>([])
   const [vocalPreference, setVocalPreference] = useState<string>('neutral')
   const [moodPreference, setMoodPreference] = useState<string>('uplifting')
+  
+  // Store original values to detect changes
+  const [originalPreferences, setOriginalPreferences] = useState({
+    categories: [] as string[],
+    musicGenres: [] as string[],
+    vocalPreference: 'neutral',
+    moodPreference: 'uplifting'
+  })
 
   const { isLoading, error } = useQuery({
     queryKey: ['userPreferences'],
     queryFn: async () => {
       if (!session?.access_token) return null
 
+      // Try to get from localStorage cache first
+      const cached = cacheManager.get<any>(CACHE_KEYS.USER_PREFERENCES, 30)
+      if (cached) {
+        const cats = cached.categories || []
+        const genres = cached.music_genres || []
+        const vocal = cached.vocal_preference || 'neutral'
+        const mood = cached.mood_preference || 'uplifting'
+        
+        setCategories(cats)
+        setMusicGenres(genres)
+        setVocalPreference(vocal)
+        setMoodPreference(mood)
+        
+        // Store original values
+        setOriginalPreferences({
+          categories: cats,
+          musicGenres: genres,
+          vocalPreference: vocal,
+          moodPreference: mood
+        })
+        
+        return cached
+      }
+
+      // Fetch from API if not cached
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/user/preferences`,
         {
@@ -53,14 +87,32 @@ export function SettingsPage() {
       if (!response.ok) throw new Error('Failed to fetch preferences')
       const prefs = await response.json()
 
-      setCategories(prefs.categories || [])
-      setMusicGenres(prefs.music_genres || [])
-      setVocalPreference(prefs.vocal_preference || 'neutral')
-      setMoodPreference(prefs.mood_preference || 'uplifting')
+      // Save to localStorage cache
+      cacheManager.set(CACHE_KEYS.USER_PREFERENCES, prefs, 30)
+
+      const cats = prefs.categories || []
+      const genres = prefs.music_genres || []
+      const vocal = prefs.vocal_preference || 'neutral'
+      const mood = prefs.mood_preference || 'uplifting'
+
+      setCategories(cats)
+      setMusicGenres(genres)
+      setVocalPreference(vocal)
+      setMoodPreference(mood)
+      
+      // Store original values
+      setOriginalPreferences({
+        categories: cats,
+        musicGenres: genres,
+        vocalPreference: vocal,
+        moodPreference: mood
+      })
 
       return prefs
     },
-    enabled: !!session?.access_token
+    enabled: !!session?.access_token,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
   })
 
   const updateMutation = useMutation({
@@ -88,7 +140,32 @@ export function SettingsPage() {
       }
       return response.json()
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Refetch preferences from API to get the latest saved data
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/user/preferences`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`
+          }
+        }
+      )
+      
+      if (response.ok) {
+        const freshPrefs = await response.json()
+        
+        // Update localStorage cache with fresh data
+        cacheManager.set(CACHE_KEYS.USER_PREFERENCES, freshPrefs, 30)
+        
+        // Update original preferences to match saved state
+        setOriginalPreferences({
+          categories: freshPrefs.categories || [],
+          musicGenres: freshPrefs.music_genres || [],
+          vocalPreference: freshPrefs.vocal_preference || 'neutral',
+          moodPreference: freshPrefs.mood_preference || 'uplifting'
+        })
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['userPreferences'] })
       setHasChanges(false)
     },
@@ -97,28 +174,55 @@ export function SettingsPage() {
     }
   })
 
+  // Check if current state differs from original
+  const checkForChanges = (
+    newCategories?: string[],
+    newGenres?: string[],
+    newVocal?: string,
+    newMood?: string
+  ) => {
+    const cats = newCategories ?? categories
+    const genres = newGenres ?? musicGenres
+    const vocal = newVocal ?? vocalPreference
+    const mood = newMood ?? moodPreference
+
+    const categoriesChanged = JSON.stringify(cats.sort()) !== JSON.stringify(originalPreferences.categories.sort())
+    const genresChanged = JSON.stringify(genres.sort()) !== JSON.stringify(originalPreferences.musicGenres.sort())
+    const vocalChanged = vocal !== originalPreferences.vocalPreference
+    const moodChanged = mood !== originalPreferences.moodPreference
+
+    const hasAnyChanges = categoriesChanged || genresChanged || vocalChanged || moodChanged
+    setHasChanges(hasAnyChanges)
+    
+    if (hasAnyChanges) {
+      console.log('📝 Changes detected:', { categoriesChanged, genresChanged, vocalChanged, moodChanged })
+    }
+  }
+
   const toggleCategory = (categoryId: string) => {
-    setCategories(prev => 
-      prev.includes(categoryId) ? prev.filter(c => c !== categoryId) : [...prev, categoryId]
-    )
-    setHasChanges(true)
+    const newCategories = categories.includes(categoryId) 
+      ? categories.filter(c => c !== categoryId) 
+      : [...categories, categoryId]
+    setCategories(newCategories)
+    checkForChanges(newCategories)
   }
 
   const toggleGenre = (genreId: string) => {
-    setMusicGenres(prev => 
-      prev.includes(genreId) ? prev.filter(g => g !== genreId) : [...prev, genreId]
-    )
-    setHasChanges(true)
+    const newGenres = musicGenres.includes(genreId)
+      ? musicGenres.filter(g => g !== genreId)
+      : [...musicGenres, genreId]
+    setMusicGenres(newGenres)
+    checkForChanges(undefined, newGenres)
   }
 
   const handleVocalChange = (vocal: string) => {
     setVocalPreference(vocal)
-    setHasChanges(true)
+    checkForChanges(undefined, undefined, vocal)
   }
 
   const handleMoodChange = (mood: string) => {
     setMoodPreference(mood)
-    setHasChanges(true)
+    checkForChanges(undefined, undefined, undefined, mood)
   }
 
   return (
@@ -249,33 +353,36 @@ export function SettingsPage() {
               </div>
             </div>
 
-            {/* Save Button */}
-            {hasChanges && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    You have unsaved changes
-                  </p>
-                  <button
-                    onClick={() => updateMutation.mutate()}
-                    disabled={updateMutation.isPending}
-                    className="px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
-                  >
-                    {updateMutation.isPending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Cog6ToothIcon className="w-5 h-5" />
-                        Save Changes
-                      </>
-                    )}
-                  </button>
-                </div>
+            {/* Save Button - Always visible */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <p className={`text-sm sm:text-base ${hasChanges ? 'text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-500 dark:text-gray-500'}`}>
+                  {hasChanges ? '⚠️ You have unsaved changes' : 'No changes to save'}
+                </p>
+                <button
+                  onClick={() => updateMutation.mutate()}
+                  disabled={!hasChanges || updateMutation.isPending}
+                  className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-all touch-manipulation ${
+                    hasChanges && !updateMutation.isPending
+                      ? 'bg-brand-primary text-white hover:bg-opacity-90 active:scale-95 cursor-pointer'
+                      : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {updateMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span className="hidden sm:inline">Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Cog6ToothIcon className="w-5 h-5" />
+                      <span className="hidden sm:inline">Save Changes</span>
+                      <span className="sm:hidden">Save</span>
+                    </>
+                  )}
+                </button>
               </div>
-            )}
+            </div>
 
             {updateMutation.isSuccess && (
               <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-500 rounded-lg p-4">

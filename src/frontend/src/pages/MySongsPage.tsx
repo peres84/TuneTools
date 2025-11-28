@@ -7,6 +7,7 @@ import { AlbumCollection } from '../components/AlbumCollection'
 import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { AlbumSkeleton, SongSkeleton } from '../components/LoadingSkeletons'
 import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
+import { cacheManager, CACHE_KEYS } from '../utils/cacheManager'
 
 export function MySongsPage() {
   const { session } = useAuth()
@@ -20,6 +21,13 @@ export function MySongsPage() {
     queryFn: async () => {
       if (!session?.access_token) return { songs: [], total: 0 }
 
+      // Try localStorage cache first
+      const cached = cacheManager.get(CACHE_KEYS.SONGS_LIST, 30)
+      if (cached) {
+        return cached
+      }
+
+      // Fetch from API
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/songs/list?limit=50`,
         {
@@ -30,7 +38,12 @@ export function MySongsPage() {
       )
 
       if (!response.ok) throw new Error('Failed to fetch songs')
-      return response.json()
+      const data = await response.json()
+      
+      // Cache the response
+      cacheManager.set(CACHE_KEYS.SONGS_LIST, data, 30)
+      
+      return data
     },
     enabled: !!session?.access_token,
     staleTime: Infinity, // Data never becomes stale automatically
