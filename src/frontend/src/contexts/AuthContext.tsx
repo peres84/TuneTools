@@ -267,6 +267,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
     setSession(null)
     setIsFirstLogin(false)
+    
+    // Clear all localStorage data
+    console.log('🧹 Clearing all localStorage data...')
+    localStorage.clear()
   }
 
   return (

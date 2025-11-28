@@ -22,9 +22,9 @@ export function NewsPage() {
     queryFn: async () => {
       if (!session?.access_token) return null
 
-      // Fetch user preferences first
-      const prefsResponse = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/user/preferences`,
+      // Fetch news from backend
+      const newsResponse = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/user/news?max_articles=12`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`
@@ -32,14 +32,12 @@ export function NewsPage() {
         }
       )
 
-      if (!prefsResponse.ok) throw new Error('Failed to fetch preferences')
-      const prefs = await prefsResponse.json()
+      if (!newsResponse.ok) throw new Error('Failed to fetch news')
+      const newsData = await newsResponse.json()
 
-      // For now, return mock data based on preferences
-      // In production, this would call a backend endpoint that aggregates news
       return {
-        categories: prefs.categories || [],
-        articles: [] as NewsArticle[]
+        categories: newsData.categories || [],
+        articles: newsData.articles || []
       }
     },
     enabled: !!session?.access_token,

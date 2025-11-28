@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MapPinIcon, ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { MapPinIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
 interface LocationModalProps {
   isOpen: boolean
@@ -26,13 +26,27 @@ export function LocationModal({ isOpen, onComplete }: LocationModalProps) {
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         setLocationStatus('granted')
         console.log('✅ Location granted:', position.coords)
+        
+        // Reverse geocode to get city name
+        let cityName = ''
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}&zoom=10`
+          )
+          const data = await response.json()
+          cityName = data.address?.city || data.address?.town || data.address?.village || data.address?.county || ''
+          console.log('🏙️ Reverse geocoded city:', cityName)
+        } catch (error) {
+          console.warn('⚠️ Failed to reverse geocode:', error)
+        }
+        
         onComplete({
           lat: position.coords.latitude,
           lon: position.coords.longitude,
-          city: ''
+          city: cityName
         })
       },
       (error) => {

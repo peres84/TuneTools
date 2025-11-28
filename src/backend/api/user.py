@@ -17,14 +17,19 @@ from models.user import (
     UserPreferencesCreate,
     UserPreferencesUpdate
 )
+from models.context import NewsArticle
 from db.supabase_client import supabase
 from utils.middleware import get_current_user
 from utils.custom_logger import log_handler
 from utils.limiter import limiter as SlowLimiter
 from utils.validators import validate_email_format
 from configuration.config_loader import config
+from services import NewsAggregatorService
 
 router = APIRouter()
+
+# Initialize news service
+news_service = NewsAggregatorService()
 
 
 @router.get("/check-email")
@@ -291,4 +296,69 @@ async def create_user_preferences(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create preferences: {str(e)}"
+        )
+
+
+@router.get("/news")
+@SlowLimiter.limit("10/minute")
+async def get_user_news(
+    request: Request,
+    location: Optional[str] = None,
+    max_articles: int = 12,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Get personalized news articles for the user
+    
+    Fetches news based on user's category preferences with 70/30 distribution:
+    - 70% from user's preferred categories
+    - 30% from general news
+    
+    Args:
+        location: Country code (e.g., "US", "GB") - defaults to "US"
+        max_articles: Maximum number of articles to return (default: 12)
+        user_id: Authenticated user ID
+        
+    Returns:
+        dict: {"articles": List[NewsArticle], "categories": List[str]}
+    """
+    try:
+        # Get user preferences
+        prefs_response = (
+            supabase.table("user_preferences")
+            .select("categories")
+            .eq("user_id", user_id)
+            .single()
+            .execute()
+        )
+        
+        if not prefs_response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="User preferences not found. Please complete onboarding."
+            )
+        
+        user_categories = prefs_response.data.get("categories", ["general"])
+        
+        # Fetch news articles
+        articles = news_service.fetch_news(
+            user_categories=user_categories,
+            location=location or "US",
+            max_articles=max_articles
+        )
+        
+        log_handler.info(f"[NEWS] Fetched {len(articles)} articles for user {user_id}")
+        
+        return {
+            "articles": [article.dict() for article in articles],
+            "categories": user_categories
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_handler.error(f"[ERROR] Failed to fetch news: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch news: {str(e)}"
         )
