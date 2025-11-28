@@ -522,7 +522,7 @@
   - Document error responses
   - _Requirements: Documentation_
 
-- [ ] 34. Create user documentation
+- [x] 34. Create user documentation
   - Create user guide in `/docs/user-guide.md`
   - Document onboarding process
   - Document song generation process
