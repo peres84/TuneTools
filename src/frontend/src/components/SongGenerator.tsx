@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { MusicalNoteIcon, SparklesIcon } from '@heroicons/react/24/outline'
+import { MusicalNoteIcon, SparklesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { getUserFriendlyErrorMessage, ERROR_MESSAGES, logError } from '../utils/errorMessages'
+import { withRetry } from '../utils/retryMechanism'
 
 interface Song {
   id: string
@@ -26,6 +28,8 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
   const { session } = useAuth()
   const queryClient = useQueryClient()
   const [statusMessage, setStatusMessage] = useState<string>('')
+  const [errorMessage, setErrorMessage] = useState<string>('')
+  const [retryCount, setRetryCount] = useState<number>(0)
   const [customTitle, setCustomTitle] = useState<string>('')
   const [customCover, setCustomCover] = useState<File | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -69,55 +73,77 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
         throw new Error('You must be logged in to generate a song')
       }
 
+      setErrorMessage('')
       setStatusMessage('Gathering your daily context (news, weather, calendar)...')
       
-      // Use FormData for file upload
-      const formData = new FormData()
-      if (customTitle) {
-        formData.append('custom_title', customTitle)
-      }
-      if (customCover) {
-        formData.append('custom_cover', customCover)
-      }
-      // Add preference overrides if provided
-      if (overrideGenres.length > 0) {
-        formData.append('override_genres', JSON.stringify(overrideGenres))
-      }
-      if (overrideVocal) {
-        formData.append('override_vocal', overrideVocal)
-      }
-      if (overrideMood) {
-        formData.append('override_mood', overrideMood)
-      }
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/songs/generate`,
+      // Use retry mechanism for the API call
+      return await withRetry(
+        async () => {
+          // Use FormData for file upload
+          const formData = new FormData()
+          if (customTitle) {
+            formData.append('custom_title', customTitle)
+          }
+          if (customCover) {
+            formData.append('custom_cover', customCover)
+          }
+          // Add preference overrides if provided
+          if (overrideGenres.length > 0) {
+            formData.append('override_genres', JSON.stringify(overrideGenres))
+          }
+          if (overrideVocal) {
+            formData.append('override_vocal', overrideVocal)
+          }
+          if (overrideMood) {
+            formData.append('override_mood', overrideMood)
+          }
+          
+          const response = await fetch(
+            `${import.meta.env.VITE_API_BASE_URL}/api/songs/generate`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: formData
+            }
+          )
+
+          if (!response.ok) {
+            let errorMessage = 'Failed to generate song'
+            let errorCode = ''
+            try {
+              const errorData = await response.json()
+              errorMessage = errorData.detail || errorMessage
+              errorCode = errorData.code || ''
+            } catch {
+              errorMessage = `Server error: ${response.status} ${response.statusText}`
+            }
+            const error = new Error(errorMessage) as Error & { status?: number; code?: string }
+            error.status = response.status
+            error.code = errorCode
+            throw error
+          }
+
+          setStatusMessage('Generating lyrics and music tags...')
+          const song = await response.json()
+          return song
+        },
         {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          },
-          body: formData
+          maxRetries: 2,
+          delayMs: 2000,
+          backoff: true,
+          onRetry: (attempt) => {
+            setRetryCount(attempt)
+            setStatusMessage(`Retrying... (Attempt ${attempt}/2)`)
+          }
         }
       )
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to generate song'
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.detail || errorMessage
-        } catch {
-          errorMessage = `Server error: ${response.status} ${response.statusText}`
-        }
-        throw new Error(errorMessage)
-      }
-
-      setStatusMessage('Generating lyrics and music tags...')
-      const song = await response.json()
-      return song
     },
     onSuccess: (song) => {
       setStatusMessage('Your song is ready!')
+      setErrorMessage('')
+      setRetryCount(0)
       // Invalidate and refetch today's song
       queryClient.invalidateQueries({ queryKey: ['todaySong'] })
       if (onGenerationComplete) {
@@ -125,8 +151,11 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       }
     },
     onError: (err: Error) => {
-      console.error('Song generation error:', err)
+      logError(err, 'SongGenerator')
+      const friendlyMessage = getUserFriendlyErrorMessage(err)
+      setErrorMessage(friendlyMessage)
       setStatusMessage('')
+      setRetryCount(0)
     }
   })
 
@@ -316,11 +345,33 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
             </div>
           )}
 
+          {/* Error Display */}
+          {errorMessage && (
+            <div className="mb-6 bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">
+                    Generation Failed
+                  </h3>
+                  <p className="text-sm text-red-700 dark:text-red-400">
+                    {errorMessage}
+                  </p>
+                  {retryCount > 0 && (
+                    <p className="text-xs text-red-600 dark:text-red-500 mt-2">
+                      Attempted {retryCount} {retryCount === 1 ? 'retry' : 'retries'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="text-center">
             <button
               onClick={handleGenerateSong}
               disabled={generateMutation.isPending || checkingToday}
-              className="px-8 py-4 bg-brand-primary text-white text-lg font-semibold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-3"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-brand-primary text-white text-base sm:text-lg font-semibold rounded-lg hover:bg-opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-3 touch-manipulation"
             >
               {generateMutation.isPending || checkingToday ? (
                 <>

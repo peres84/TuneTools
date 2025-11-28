@@ -118,12 +118,12 @@ export function SongList({ songs, albumName }: SongListProps) {
       )}
 
       {/* Responsive Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {songs.map((song) => (
           <div
             key={song.id}
             onClick={() => handleSongClick(song.id)}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group active:scale-95 touch-manipulation"
           >
             {/* Song Card Header */}
             <div className="bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 dark:from-brand-primary/20 dark:to-brand-secondary/20 p-6 group-hover:from-brand-primary/20 group-hover:to-brand-secondary/20 transition-all">

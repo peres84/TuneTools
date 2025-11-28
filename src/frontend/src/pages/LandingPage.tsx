@@ -34,39 +34,39 @@ export function LandingPage() {
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="max-w-5xl mx-auto text-center">
           {/* Logo and Title */}
-          <div className="mb-8 flex items-center justify-center gap-4">
+          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <img
               src={logoDisk}
               alt="TuneTools Logo"
-              className="w-20 h-20 md:w-24 md:h-24 animate-[spin_8s_linear_infinite]"
+              className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 animate-[spin_8s_linear_infinite]"
             />
-            <h1 className="text-5xl md:text-7xl font-bold text-brand-primary">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-brand-primary text-center sm:text-left">
               TuneTools
             </h1>
           </div>
 
           {/* Tagline */}
           <div className="mb-6">
-            <p className="text-2xl md:text-3xl text-gray-700 dark:text-gray-300 mb-4 font-semibold">
+            <p className="text-xl sm:text-2xl md:text-3xl text-gray-700 dark:text-gray-300 mb-4 font-semibold px-4">
               Your Daily Song, Generated from Your Life
             </p>
           </div>
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-12 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-8 sm:mb-12 max-w-3xl mx-auto px-4">
             Transform your daily context—news, weather, and calendar events—into personalized AI-generated songs.
             Every day is unique. Your soundtrack should be too.
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-16 px-4">
             <Link
               to="/signup"
-              className="px-8 py-4 bg-brand-primary text-white rounded-lg font-semibold text-lg hover:bg-opacity-90 hover:scale-105 transition-all shadow-lg"
+              className="px-6 sm:px-8 py-3 sm:py-4 bg-brand-primary text-white rounded-lg font-semibold text-base sm:text-lg hover:bg-opacity-90 active:scale-95 transition-all shadow-lg text-center touch-manipulation"
             >
               Get Started Free
             </Link>
             <Link
               to="/login"
-              className="px-8 py-4 bg-white dark:bg-gray-800 text-brand-primary dark:text-brand-secondary border-2 border-brand-primary dark:border-brand-secondary rounded-lg font-semibold text-lg hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 transition-all shadow-lg"
+              className="px-6 sm:px-8 py-3 sm:py-4 bg-white dark:bg-gray-800 text-brand-primary dark:text-brand-secondary border-2 border-brand-primary dark:border-brand-secondary rounded-lg font-semibold text-base sm:text-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all shadow-lg text-center touch-manipulation"
             >
               Log In
             </Link>

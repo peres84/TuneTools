@@ -64,8 +64,22 @@ app = FastAPI(
 #Setup rate limiter
 app.state.limiter = limiter
 
-#Add global exception handler
+#Add global exception handlers
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
+# Import error handlers
+from utils.error_handler import (
+    TuneToolsException,
+    tunetools_exception_handler,
+    http_exception_handler,
+    general_exception_handler
+)
+from fastapi import HTTPException
+
+# Add custom exception handlers
+app.add_exception_handler(TuneToolsException, tunetools_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
 
 # Configure CORS
 origins = [

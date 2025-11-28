@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { DashboardLayout } from '../components/DashboardLayout'
-import { Cog6ToothIcon } from '@heroicons/react/24/outline'
+import { Cog6ToothIcon, ExclamationTriangleIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { SettingsSkeleton } from '../components/LoadingSkeletons'
+import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
 
 const CATEGORIES = [
   { id: 'technology', label: 'Technology', icon: '💻' },
@@ -34,7 +36,7 @@ export function SettingsPage() {
   const [vocalPreference, setVocalPreference] = useState<string>('neutral')
   const [moodPreference, setMoodPreference] = useState<string>('uplifting')
 
-  const { isLoading } = useQuery({
+  const { isLoading, error } = useQuery({
     queryKey: ['userPreferences'],
     queryFn: async () => {
       if (!session?.access_token) return null
@@ -80,12 +82,18 @@ export function SettingsPage() {
         }
       )
 
-      if (!response.ok) throw new Error('Failed to update preferences')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail || 'Failed to update preferences')
+      }
       return response.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userPreferences'] })
       setHasChanges(false)
+    },
+    onError: (err: Error) => {
+      console.error('Failed to save settings:', err)
     }
   })
 
@@ -124,9 +132,20 @@ export function SettingsPage() {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading preferences...</p>
+          <SettingsSkeleton />
+        ) : error ? (
+          <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
+            <div className="flex items-start gap-3">
+              <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-1">
+                  Failed to Load Settings
+                </h3>
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  {getUserFriendlyErrorMessage(error)}
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-8">
@@ -260,17 +279,28 @@ export function SettingsPage() {
 
             {updateMutation.isSuccess && (
               <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-500 rounded-lg p-4">
-                <p className="text-green-800 dark:text-green-200">
-                  ✓ Preferences saved successfully!
-                </p>
+                <div className="flex items-center gap-3">
+                  <CheckCircleIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  <p className="text-green-800 dark:text-green-200 font-medium">
+                    Preferences saved successfully!
+                  </p>
+                </div>
               </div>
             )}
 
             {updateMutation.isError && (
               <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-4">
-                <p className="text-red-800 dark:text-red-200">
-                  Failed to save preferences. Please try again.
-                </p>
+                <div className="flex items-start gap-3">
+                  <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-red-800 dark:text-red-200 font-medium mb-1">
+                      Failed to save preferences
+                    </p>
+                    <p className="text-sm text-red-700 dark:text-red-300">
+                      {getUserFriendlyErrorMessage(updateMutation.error)}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>

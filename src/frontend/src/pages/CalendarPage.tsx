@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { DashboardLayout } from '../components/DashboardLayout'
-import { CalendarIcon, ClockIcon, LinkIcon } from '@heroicons/react/24/outline'
+import { CalendarIcon, ClockIcon, LinkIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { CalendarSkeleton } from '../components/LoadingSkeletons'
+import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
 
 interface CalendarActivity {
   title: string
@@ -51,10 +53,21 @@ export function CalendarPage() {
           </p>
         </div>
 
-        {isLoading && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading calendar...</p>
+        {isLoading && <CalendarSkeleton />}
+
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
+            <div className="flex items-start gap-3">
+              <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-1">
+                  Failed to Load Calendar
+                </h3>
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  {getUserFriendlyErrorMessage(error)}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

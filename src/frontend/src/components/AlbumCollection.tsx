@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
-import { MusicalNoteIcon, CalendarIcon, PencilIcon, TrashIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import { MusicalNoteIcon, CalendarIcon, PencilIcon, TrashIcon, PhotoIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { OptionsMenu } from './OptionsMenu'
 import { EditModal } from './EditModal'
 import { ConfirmModal } from './ConfirmModal'
+import { AlbumSkeleton } from './LoadingSkeletons'
+import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
 
 interface Album {
   id: string
@@ -178,14 +180,42 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
     )
   }
 
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        {[...Array(4)].map((_, i) => (
+          <AlbumSkeleton key={i} />
+        ))}
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
+        <div className="flex items-start gap-3">
+          <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-1">
+              Failed to Load Albums
+            </h3>
+            <p className="text-sm text-red-700 dark:text-red-400">
+              {getUserFriendlyErrorMessage(error)}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!albums || albums.length === 0) {
     return (
-      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-12 text-center">
-        <MusicalNoteIcon className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 sm:p-12 text-center">
+        <MusicalNoteIcon className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
+        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">
           No Albums Yet
         </h3>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
           Generate your first song to create an album!
         </p>
       </div>
@@ -193,14 +223,14 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
       {albums.map((album) => {
         const isLoading = loadingAlbumId === album.id
         return (
         <div
           key={album.id}
           onClick={() => !isLoading && onAlbumClick?.(album.id)}
-          className={`group bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden transform hover:scale-105 ${
+          className={`group bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden transform hover:scale-105 active:scale-95 touch-manipulation ${
             isLoading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
           }`}
         >

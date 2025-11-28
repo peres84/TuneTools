@@ -4,7 +4,9 @@ import { useAuth } from '../contexts/AuthContext'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { SongList } from '../components/SongList'
 import { AlbumCollection } from '../components/AlbumCollection'
-import { ArrowPathIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { AlbumSkeleton, SongSkeleton } from '../components/LoadingSkeletons'
+import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
 
 export function MySongsPage() {
   const { session } = useAuth()
@@ -97,12 +99,10 @@ export function MySongsPage() {
           </button>
 
           {albumSongsLoading ? (
-            <div className="text-center py-12">
-              <svg className="animate-spin h-12 w-12 mx-auto text-brand-primary mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <p className="text-gray-600 dark:text-gray-400">Loading album songs...</p>
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <SongSkeleton key={i} />
+              ))}
             </div>
           ) : (
             <SongList
@@ -159,12 +159,10 @@ export function MySongsPage() {
           </h2>
           
           {songsLoading ? (
-            <div className="text-center py-12">
-              <svg className="animate-spin h-12 w-12 mx-auto text-brand-primary mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <p className="text-gray-600 dark:text-gray-400">Loading songs...</p>
+            <div className="space-y-4">
+              {[...Array(6)].map((_, i) => (
+                <SongSkeleton key={i} />
+              ))}
             </div>
           ) : (
             <SongList songs={songsData?.songs || []} />

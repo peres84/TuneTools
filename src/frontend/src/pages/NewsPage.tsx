@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { DashboardLayout } from '../components/DashboardLayout'
-import { NewspaperIcon, ClockIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
+import { NewspaperIcon, ClockIcon, ArrowTopRightOnSquareIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { NewsSkeleton } from '../components/LoadingSkeletons'
+import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
 
 interface NewsArticle {
   title: string
@@ -60,17 +62,26 @@ export function NewsPage() {
         </div>
 
         {isLoading && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading news...</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {[...Array(6)].map((_, i) => (
+              <NewsSkeleton key={i} />
+            ))}
           </div>
         )}
 
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
-            <p className="text-red-800 dark:text-red-200">
-              Failed to load news: {error instanceof Error ? error.message : 'Unknown error'}
-            </p>
+            <div className="flex items-start gap-3">
+              <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-1">
+                  Failed to Load News
+                </h3>
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  {getUserFriendlyErrorMessage(error)}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

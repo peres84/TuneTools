@@ -157,11 +157,11 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
 
       {/* Player container */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 md:p-12 max-w-2xl w-full">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-12 max-w-2xl w-full mx-4">
           
           {/* Vinyl disk */}
-          <div className="flex justify-center mb-8">
-            <div className="relative w-64 h-64 md:w-80 md:h-80">
+          <div className="flex justify-center mb-6 md:mb-8">
+            <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-80 lg:h-80">
               <img
                 src={vinylDiskUrl}
                 alt={song.title}
@@ -174,10 +174,10 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
 
           {/* Song info */}
           <div className="text-center mb-6">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 md:mb-3 px-2">
               {song.title}
             </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-4 md:mb-6 px-2">
               {song.description}
             </p>
             
@@ -222,10 +222,10 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
           </div>
 
           {/* Controls */}
-          <div className="flex items-center justify-center gap-6 mb-6">
+          <div className="flex items-center justify-center gap-4 sm:gap-6 mb-6 md:mb-8">
             <button
               onClick={togglePlayPause}
-              className="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95"
+              className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 touch-manipulation"
             >
               {isPlaying ? (
                 <PauseIcon className="w-10 h-10" />
