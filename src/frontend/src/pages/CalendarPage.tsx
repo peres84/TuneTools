@@ -222,8 +222,18 @@ export function CalendarPage() {
                   This Week
                 </button>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {calendarData.total_count} {calendarData.total_count === 1 ? 'event' : 'events'}
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {calendarData.total_count} {calendarData.total_count === 1 ? 'event' : 'events'}
+                </div>
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Refresh calendar"
+                >
+                  <ArrowPathIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
               </div>
             </div>
 
