@@ -411,8 +411,12 @@ async def list_songs(
         List of songs
     """
     try:
+        # Use a fresh client to avoid JWT expiration issues
+        from db.supabase_client import get_supabase_client
+        client = get_supabase_client()
+        
         response = (
-            supabase.table("songs")
+            client.table("songs")
             .select("*")
             .eq("user_id", user_id)
             .order("created_at", desc=True)
@@ -424,6 +428,7 @@ async def list_songs(
         return {"songs": response.data or [], "total": len(response.data or [])}
         
     except Exception as e:
+        log_handler.error(f"Failed to list songs: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to list songs: {str(e)}"

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { useNavigate, useLocation } from 'react-router-dom'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../services/supabase'
+import SessionExpiredModal from '../components/SessionExpiredModal'
 
 interface AuthContextType {
   user: User | null
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [isFirstLogin, setIsFirstLogin] = useState(false)
+  const [showSessionExpired, setShowSessionExpired] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -33,7 +35,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const expiresInMs = (expiresAt * 1000) - Date.now()
     const refreshAt = expiresInMs * 0.9 // Refresh at 90% of expiry time
 
-    console.log(`🔄 Token refresh scheduled in ${Math.round(refreshAt / 1000 / 60)} minutes`)
+    // Ensure refreshAt is within valid range (max 24 hours)
+    const MAX_TIMEOUT = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+    const safeRefreshAt = Math.min(Math.max(refreshAt, 0), MAX_TIMEOUT)
+
+    if (safeRefreshAt <= 0) {
+      console.log('⚠️ Token already expired, refreshing immediately...')
+      supabase.auth.refreshSession()
+      return
+    }
+
+    console.log(`🔄 Token refresh scheduled in ${Math.round(safeRefreshAt / 1000 / 60)} minutes`)
 
     const refreshTimer = setTimeout(async () => {
       console.log('🔄 Refreshing access token...')
@@ -48,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(data.session)
         setUser(data.session.user)
       }
-    }, refreshAt)
+    }, safeRefreshAt)
 
     return () => clearTimeout(refreshTimer)
   }, [session])
@@ -56,7 +68,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Session restoration on app load
   useEffect(() => {
     // Get initial session from localStorage
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        // Check if token is expired or about to expire
+        const expiresAt = session.expires_at
+        if (expiresAt) {
+          const expiresInMs = (expiresAt * 1000) - Date.now()
+          
+          // If token expires in less than 5 minutes or already expired, refresh it
+          if (expiresInMs < 5 * 60 * 1000) {
+            console.log('🔄 Token expired or expiring soon, refreshing...')
+            const { data, error } = await supabase.auth.refreshSession()
+            
+            if (error) {
+              console.error('❌ Token refresh failed on load:', error)
+              // Sign out if refresh fails
+              await supabase.auth.signOut()
+              setSession(null)
+              setUser(null)
+              setLoading(false)
+              return
+            }
+            
+            if (data.session) {
+              console.log('✅ Token refreshed successfully on load')
+              setSession(data.session)
+              setUser(data.session.user)
+              setLoading(false)
+              return
+            }
+          }
+        }
+      }
+      
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
@@ -113,6 +157,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Handle sign out
       if (event === 'SIGNED_OUT') {
+        // Show session expired modal if user was previously logged in
+        // (don't show on manual logout or initial page load)
+        if (user && location.pathname !== '/' && location.pathname !== '/login' && location.pathname !== '/signup') {
+          setShowSessionExpired(true)
+        }
         navigate('/')
       }
     })
@@ -237,6 +286,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      <SessionExpiredModal 
+        isOpen={showSessionExpired} 
+        onClose={() => {
+          setShowSessionExpired(false)
+          navigate('/login')
+        }} 
+      />
     </AuthContext.Provider>
   )
 }

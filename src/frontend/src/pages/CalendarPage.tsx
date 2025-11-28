@@ -80,18 +80,29 @@ export function CalendarPage() {
         )}
 
         {calendarData && !calendarData.connected && (
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-12 text-center">
-            <CalendarIcon className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 sm:p-12 text-center">
+            <CalendarIcon className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">
               Calendar Not Connected
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">
               Connect your Google Calendar to see your activities here and include them in song generation.
             </p>
-            <button className="px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-colors font-semibold inline-flex items-center gap-2">
-              <LinkIcon className="w-5 h-5" />
-              Connect Google Calendar
-            </button>
+            <div className="relative inline-block">
+              <button 
+                disabled
+                className="px-6 py-3 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed font-semibold inline-flex items-center gap-2 opacity-60"
+              >
+                <LinkIcon className="w-5 h-5" />
+                Connect Google Calendar
+              </button>
+              <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                Coming Soon
+              </div>
+            </div>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-4">
+              Google Calendar integration is currently in development
+            </p>
           </div>
         )}
 
