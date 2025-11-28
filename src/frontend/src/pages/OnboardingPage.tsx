@@ -39,7 +39,7 @@ export function OnboardingPage() {
       console.log('✅ Preferences saved successfully', response.data)
 
       // Onboarding_completed flag is set by the backend
-      // Redirect to dashboard
+      // Redirect to dashboard (location modal will show there)
       navigate('/dashboard')
     } catch (err: any) {
       console.error('❌ Failed to save preferences:', err)
