@@ -179,18 +179,35 @@ class CalendarService:
             credentials = response.data
             access_token = credentials["access_token"]
             
+            print(f"[OK] Found calendar integration for user {user_id}")
+            
             # Check if token is expired
             if credentials.get("token_expires_at"):
+                from datetime import timezone
                 expires_at = datetime.fromisoformat(credentials["token_expires_at"])
-                if datetime.utcnow() >= expires_at:
+                now = datetime.now(timezone.utc)
+                
+                # Make expires_at timezone-aware if it isn't
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=timezone.utc)
+                
+                print(f"[DEBUG] Token expires at: {expires_at}, Current time: {now}")
+                
+                if now >= expires_at:
+                    print(f"[WARN] Token expired, refreshing...")
                     # Token expired, need to refresh
                     access_token = await self._refresh_access_token(
                         user_id,
                         credentials["refresh_token"]
                     )
+                else:
+                    print(f"[OK] Token still valid")
             
             # Fetch calendar events
-            return await self._fetch_events(access_token, days_ahead)
+            print(f"[INFO] Fetching calendar events for {days_ahead} days ahead...")
+            activities = await self._fetch_events(access_token, days_ahead)
+            print(f"[OK] Fetched {len(activities)} activities")
+            return activities
             
         except Exception as e:
             print(f"[ERROR] Failed to fetch calendar activities: {str(e)}")

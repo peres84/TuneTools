@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { DashboardLayout } from '../components/DashboardLayout'
-import { Cog6ToothIcon, ExclamationTriangleIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { Cog6ToothIcon, ExclamationTriangleIcon, CheckCircleIcon, CalendarIcon, LinkIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { SettingsSkeleton } from '../components/LoadingSkeletons'
 import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
 import { cacheManager, CACHE_KEYS } from '../utils/cacheManager'
@@ -353,6 +353,9 @@ export function SettingsPage() {
               </div>
             </div>
 
+            {/* Google Calendar Integration */}
+            <CalendarIntegration />
+
             {/* Save Button - Always visible */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
               <div className="flex items-center justify-between">
@@ -414,5 +417,206 @@ export function SettingsPage() {
         )}
       </div>
     </DashboardLayout>
+  )
+}
+
+
+// Calendar Integration Component
+function CalendarIntegration() {
+  const { session } = useAuth()
+  const queryClient = useQueryClient()
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+
+  // Check URL params for OAuth callback status
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const calendarStatus = params.get('calendar')
+    const errorMessage = params.get('message')
+
+    if (calendarStatus === 'success') {
+      setStatusMessage({ type: 'success', message: 'Google Calendar connected successfully!' })
+      // Clean up URL
+      window.history.replaceState({}, '', '/settings')
+      // Refetch status
+      queryClient.invalidateQueries({ queryKey: ['calendarStatus'] })
+    } else if (calendarStatus === 'error') {
+      setStatusMessage({ type: 'error', message: errorMessage || 'Failed to connect calendar' })
+      // Clean up URL
+      window.history.replaceState({}, '', '/settings')
+    }
+  }, [queryClient])
+
+  // Fetch calendar connection status
+  const { data: calendarStatus, isLoading } = useQuery({
+    queryKey: ['calendarStatus'],
+    queryFn: async () => {
+      if (!session?.access_token) return null
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/status`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        }
+      )
+
+      if (!response.ok) throw new Error('Failed to fetch calendar status')
+      return response.json()
+    },
+    enabled: !!session?.access_token,
+  })
+
+  // Connect calendar mutation
+  const connectMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/authorize`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`
+          }
+        }
+      )
+
+      if (!response.ok) throw new Error('Failed to get authorization URL')
+      const data = await response.json()
+      
+      // Open OAuth URL in popup
+      const width = 600
+      const height = 700
+      const left = window.screen.width / 2 - width / 2
+      const top = window.screen.height / 2 - height / 2
+      
+      window.open(
+        data.authorization_url,
+        'Google Calendar Authorization',
+        `width=${width},height=${height},left=${left},top=${top}`
+      )
+    },
+    onError: (err: Error) => {
+      setStatusMessage({ type: 'error', message: getUserFriendlyErrorMessage(err) })
+    }
+  })
+
+  // Disconnect calendar mutation
+  const disconnectMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/revoke`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`
+          }
+        }
+      )
+
+      if (!response.ok) throw new Error('Failed to disconnect calendar')
+      return response.json()
+    },
+    onSuccess: () => {
+      setStatusMessage({ type: 'success', message: 'Calendar disconnected successfully' })
+      queryClient.invalidateQueries({ queryKey: ['calendarStatus'] })
+    },
+    onError: (err: Error) => {
+      setStatusMessage({ type: 'error', message: getUserFriendlyErrorMessage(err) })
+    }
+  })
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      <div className="flex items-center gap-3 mb-4">
+        <CalendarIcon className="w-8 h-8 text-brand-primary" />
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Google Calendar
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Connect your calendar to include daily activities in your songs
+          </p>
+        </div>
+      </div>
+
+      {statusMessage && (
+        <div className={`mb-4 p-4 rounded-lg border-2 ${
+          statusMessage.type === 'success'
+            ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
+            : 'bg-red-50 dark:bg-red-900/20 border-red-500'
+        }`}>
+          <div className="flex items-center gap-3">
+            {statusMessage.type === 'success' ? (
+              <CheckCircleIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+            ) : (
+              <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+            )}
+            <p className={`font-medium ${
+              statusMessage.type === 'success'
+                ? 'text-green-800 dark:text-green-200'
+                : 'text-red-800 dark:text-red-200'
+            }`}>
+              {statusMessage.message}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-primary"></div>
+          <span>Checking connection status...</span>
+        </div>
+      ) : calendarStatus?.connected ? (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+            <CheckCircleIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+            <div className="flex-1">
+              <p className="font-medium text-green-800 dark:text-green-200">
+                Connected to Google Calendar
+              </p>
+              <p className="text-sm text-green-700 dark:text-green-300">
+                Connected on {new Date(calendarStatus.connected_at).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => disconnectMutation.mutate()}
+            disabled={disconnectMutation.isPending}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {disconnectMutation.isPending ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>Disconnecting...</span>
+              </>
+            ) : (
+              <>
+                <TrashIcon className="w-5 h-5" />
+                <span>Disconnect Calendar</span>
+              </>
+            )}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => connectMutation.mutate()}
+          disabled={connectMutation.isPending}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+        >
+          {connectMutation.isPending ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span>Connecting...</span>
+            </>
+          ) : (
+            <>
+              <LinkIcon className="w-5 h-5" />
+              <span>Connect Google Calendar</span>
+            </>
+          )}
+        </button>
+      )}
+    </div>
   )
 }

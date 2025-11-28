@@ -133,7 +133,7 @@ async def protected_example(user_id: str = Depends(get_current_user)):
 
 
 # Import API routers
-from api import user, songs, albums, share, root_endpoint, songs_management, albums_management, auth
+from api import user, songs, albums, share, root_endpoint, songs_management, albums_management, auth, calendar
 
 # Include routers
 app.include_router(root_endpoint.router, tags=["root"])  # Root endpoint at /
@@ -144,6 +144,7 @@ app.include_router(songs_management.router, prefix="/api/songs", tags=["songs-ma
 app.include_router(albums.router, prefix="/api/albums", tags=["albums"])
 app.include_router(albums_management.router, prefix="/api/albums", tags=["albums-management"])
 app.include_router(share.router, prefix="/api/share", tags=["share"])
+app.include_router(calendar.router, tags=["calendar"])
 
 
 """Start server-----------------------------------------------------------"""
