@@ -8,6 +8,7 @@ interface OnboardingStep2Props {
 
 export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
   const [isConnecting, setIsConnecting] = useState(false)
+  const [showWarning, setShowWarning] = useState(false)
 
   const connectMutation = useMutation({
     mutationFn: async () => {
@@ -47,6 +48,10 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
   }
 
   const handleSkip = () => {
+    setShowWarning(true)
+  }
+
+  const handleConfirmSkip = () => {
     onComplete(false)
   }
 
@@ -141,6 +146,38 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
         )}
       </div>
 
+      {showWarning && (
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-500 rounded-lg">
+          <div className="flex items-start gap-3">
+            <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1">
+              <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
+                Calendar Features Won't Work
+              </h4>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
+                Without connecting your Google Calendar, the Calendar section will be empty and your daily songs won't include your activities. You can always connect it later in Settings.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleConfirmSkip}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 active:scale-95 transition-all text-sm font-semibold"
+                >
+                  Skip Anyway
+                </button>
+                <button
+                  onClick={() => setShowWarning(false)}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 active:scale-95 transition-all text-sm font-semibold"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between">
         <button
           onClick={onBack}
@@ -149,12 +186,14 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
           ← Back
         </button>
         <div className="flex gap-3">
-          <button
-            onClick={handleSkip}
-            className="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            Skip for now
-          </button>
+          {!showWarning && (
+            <button
+              onClick={handleSkip}
+              className="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              Skip for now
+            </button>
+          )}
           {isConnecting && (
             <button
               onClick={handleContinue}

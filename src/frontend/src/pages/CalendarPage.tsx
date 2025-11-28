@@ -25,7 +25,7 @@ interface CalendarData {
 export function CalendarPage() {
   const { session } = useAuth()
   const queryClient = useQueryClient()
-  const [viewMode, setViewMode] = useState<'day' | 'week'>('week')
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week')
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -66,8 +66,8 @@ export function CalendarPage() {
         }
       }
 
-      // Fetch calendar activities (1 day or 7 days)
-      const daysAhead = viewMode === 'day' ? 1 : 7
+      // Fetch calendar activities (1 day, 7 days, or 30 days)
+      const daysAhead = viewMode === 'day' ? 1 : viewMode === 'week' ? 7 : 30
       const activitiesResponse = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/calendar/activities?days_ahead=${daysAhead}`,
         {
@@ -113,19 +113,87 @@ export function CalendarPage() {
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
   }
 
-  const getWeekDates = () => {
+  const getWeekDates = (startDate: Date) => {
     const dates = []
-    const today = new Date()
+    // Get Monday of the week containing startDate
+    const monday = new Date(startDate)
+    const day = monday.getDay()
+    const diff = day === 0 ? -6 : 1 - day // Adjust to Monday
+    monday.setDate(monday.getDate() + diff)
+    
+    // Get 7 days starting from Monday
     for (let i = 0; i < 7; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
+      const date = new Date(monday)
+      date.setDate(monday.getDate() + i)
       dates.push(date.toISOString().split('T')[0])
     }
     return dates
   }
 
+  const getMonthDates = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    
+    const dates = []
+    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+      dates.push(new Date(d).toISOString().split('T')[0])
+    }
+    return dates
+  }
+
+  const getMonthCalendarGrid = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    
+    // Get day of week for first day (0 = Sunday, 1 = Monday, etc.)
+    let firstDayOfWeek = firstDay.getDay()
+    // Convert to Monday = 0, Sunday = 6
+    firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
+    
+    // Create grid with empty cells for days before month starts
+    const grid: (string | null)[] = []
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      grid.push(null)
+    }
+    
+    // Add all days of the month
+    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+      grid.push(new Date(d).toISOString().split('T')[0])
+    }
+    
+    return grid
+  }
+
   const getTodayKey = () => {
     return new Date().toISOString().split('T')[0]
+  }
+
+  const navigateDay = (direction: 'prev' | 'next') => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1))
+    setSelectedDate(newDate)
+  }
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7))
+    setSelectedDate(newDate)
+  }
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newDate = new Date(selectedDate)
+    newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1))
+    setSelectedDate(newDate)
+  }
+
+  const goToToday = () => {
+    setSelectedDate(new Date())
   }
 
   const handleRefresh = async () => {
@@ -198,41 +266,95 @@ export function CalendarPage() {
 
         {calendarData && calendarData.connected && (
           <>
-            {/* View Mode Toggle */}
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setViewMode('day')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    viewMode === 'day'
-                      ? 'bg-brand-primary text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() => setViewMode('week')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    viewMode === 'week'
-                      ? 'bg-brand-primary text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  This Week
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {calendarData.total_count} {calendarData.total_count === 1 ? 'event' : 'events'}
+            {/* View Mode Toggle and Navigation */}
+            <div className="space-y-4 mb-6">
+              {/* View Mode Buttons */}
+              <div className="flex justify-between items-center">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setViewMode('day'); goToToday(); }}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      viewMode === 'day'
+                        ? 'bg-brand-primary text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Day
+                  </button>
+                  <button
+                    onClick={() => { setViewMode('week'); goToToday(); }}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      viewMode === 'week'
+                        ? 'bg-brand-primary text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Week
+                  </button>
+                  <button
+                    onClick={() => { setViewMode('month'); goToToday(); }}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      viewMode === 'month'
+                        ? 'bg-brand-primary text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Month
+                  </button>
                 </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {calendarData.total_count} {calendarData.total_count === 1 ? 'event' : 'events'}
+                  </div>
+                  <button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Refresh calendar"
+                  >
+                    <ArrowPathIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Navigation Controls */}
+              <div className="flex justify-between items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
                 <button
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Refresh calendar"
+                  onClick={() => {
+                    if (viewMode === 'day') navigateDay('prev')
+                    else if (viewMode === 'week') navigateWeek('prev')
+                    else navigateMonth('prev')
+                  }}
+                  className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                  title="Previous"
                 >
-                  <ArrowPathIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <ChevronLeftIcon className="w-5 h-5" />
+                </button>
+                
+                <div className="text-center">
+                  <div className="font-semibold text-gray-900 dark:text-white">
+                    {viewMode === 'day' && selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    {viewMode === 'week' && `Week of ${getWeekDates(selectedDate)[0]} to ${getWeekDates(selectedDate)[6]}`}
+                    {viewMode === 'month' && selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </div>
+                  <button
+                    onClick={goToToday}
+                    className="text-sm text-brand-primary hover:underline mt-1"
+                  >
+                    Go to Today
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (viewMode === 'day') navigateDay('next')
+                    else if (viewMode === 'week') navigateWeek('next')
+                    else navigateMonth('next')
+                  }}
+                  className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                  title="Next"
+                >
+                  <ChevronRightIcon className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -245,14 +367,14 @@ export function CalendarPage() {
                   No Upcoming Activities
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Your calendar is empty for {viewMode === 'day' ? 'today' : 'this week'}. Activities will appear here when scheduled.
+                  Your calendar is empty for {viewMode === 'day' ? 'this day' : viewMode === 'week' ? 'this week' : 'this month'}. Activities will appear here when scheduled.
                 </p>
               </div>
             ) : viewMode === 'day' ? (
               /* Day View */
               <div className="space-y-4">
                 {Object.entries(calendarData.activities)
-                  .filter(([date]) => date === getTodayKey())
+                  .filter(([date]) => date === selectedDate.toISOString().split('T')[0])
                   .map(([date, activities]) => (
                     <div key={date}>
                       {(activities as CalendarActivity[]).map((activity, index) => (
@@ -299,10 +421,10 @@ export function CalendarPage() {
                     </div>
                   ))}
               </div>
-            ) : (
+            ) : viewMode === 'week' ? (
               /* Week View */
               <div className="space-y-6">
-                {getWeekDates().map((dateKey) => {
+                {getWeekDates(selectedDate).map((dateKey) => {
                   const dayActivities = (calendarData.activities[dateKey] || []) as CalendarActivity[]
                   const isToday = dateKey === getTodayKey()
                   
@@ -356,6 +478,80 @@ export function CalendarPage() {
                     </div>
                   )
                 })}
+              </div>
+            ) : (
+              /* Month View - Calendar Grid */
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 bg-gray-100 dark:bg-gray-700">
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                    <div key={day} className="p-3 text-center font-semibold text-gray-700 dark:text-gray-300 text-sm">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 border-l border-t border-gray-200 dark:border-gray-700">
+                  {getMonthCalendarGrid(selectedDate).map((dateKey, index) => {
+                    if (!dateKey) {
+                      // Empty cell for days before month starts
+                      return (
+                        <div
+                          key={`empty-${index}`}
+                          className="min-h-24 border-r border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
+                        />
+                      )
+                    }
+                    
+                    const dayActivities = (calendarData.activities[dateKey] || []) as CalendarActivity[]
+                    const date = new Date(dateKey)
+                    const isToday = dateKey === getTodayKey()
+                    const dayNumber = date.getDate()
+                    
+                    return (
+                      <div
+                        key={dateKey}
+                        className={`min-h-24 border-r border-b border-gray-200 dark:border-gray-700 p-2 ${
+                          isToday ? 'bg-brand-primary/10 dark:bg-brand-primary/20' : 'bg-white dark:bg-gray-800'
+                        } hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}
+                      >
+                        <div className={`text-sm font-semibold mb-1 ${
+                          isToday ? 'text-brand-primary' : 'text-gray-700 dark:text-gray-300'
+                        }`}>
+                          {dayNumber}
+                          {isToday && <span className="ml-1 text-xs">(Today)</span>}
+                        </div>
+                        
+                        {dayActivities.length > 0 && (
+                          <div className="space-y-1">
+                            {dayActivities.slice(0, 3).map((activity, idx) => (
+                              <div
+                                key={idx}
+                                className="text-xs p-1 rounded bg-brand-primary/20 dark:bg-brand-primary/30 text-gray-900 dark:text-white truncate"
+                                title={activity.title}
+                              >
+                                <div className="flex items-center gap-1">
+                                  {activity.is_all_day ? (
+                                    <span className="font-medium">📅</span>
+                                  ) : (
+                                    <span className="font-medium">🕐</span>
+                                  )}
+                                  <span className="truncate">{activity.title}</span>
+                                </div>
+                              </div>
+                            ))}
+                            {dayActivities.length > 3 && (
+                              <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                                +{dayActivities.length - 3} more
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </>

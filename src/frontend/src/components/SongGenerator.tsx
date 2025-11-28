@@ -79,8 +79,25 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       // Use retry mechanism for the API call
       return await withRetry(
         async () => {
+          // Get location from localStorage
+          const savedLocation = localStorage.getItem('user_location')
+          let locationParam = 'Cupertino' // Default fallback
+          
+          if (savedLocation) {
+            try {
+              const location = JSON.parse(savedLocation)
+              // If city is provided, use it; otherwise use coordinates
+              locationParam = location.city || `${location.lat},${location.lon}`
+              console.log('📍 Using location for song generation:', locationParam)
+            } catch (e) {
+              console.warn('Failed to parse saved location, using default')
+            }
+          }
+          
           // Use FormData for file upload
           const formData = new FormData()
+          formData.append('location', locationParam)
+          
           if (customTitle) {
             formData.append('custom_title', customTitle)
           }
