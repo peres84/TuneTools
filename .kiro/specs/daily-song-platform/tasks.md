@@ -507,7 +507,7 @@
   - Set up environment variables
   - _Requirements: Deployment_
 
-- [ ] 32. Create deployment documentation
+- [x] 32. Create deployment documentation
   - Document environment variables in `/docs/deployment.md`
   - Document Supabase setup steps
   - Document backend deployment process
