@@ -1,16 +1,155 @@
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../contexts/AuthContext'
 import { DashboardLayout } from '../components/DashboardLayout'
+import { NewspaperIcon, ClockIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
+
+interface NewsArticle {
+  title: string
+  description: string
+  url: string
+  source: string
+  published_at: string
+  image_url?: string
+}
 
 export function NewsPage() {
+  const { session } = useAuth()
+
+  const { data: newsData, isLoading, error } = useQuery({
+    queryKey: ['userNews'],
+    queryFn: async () => {
+      if (!session?.access_token) return null
+
+      // Fetch user preferences first
+      const prefsResponse = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/user/preferences`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        }
+      )
+
+      if (!prefsResponse.ok) throw new Error('Failed to fetch preferences')
+      const prefs = await prefsResponse.json()
+
+      // For now, return mock data based on preferences
+      // In production, this would call a backend endpoint that aggregates news
+      return {
+        categories: prefs.categories || [],
+        articles: [] as NewsArticle[]
+      }
+    },
+    enabled: !!session?.access_token,
+    staleTime: 5 * 60 * 1000
+  })
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-brand-primary mb-8">News</h1>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-brand-primary mb-2">Your News Feed</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            News aggregation will be implemented in the future
+            Personalized news based on your interests
           </p>
         </div>
+
+        {isLoading && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading news...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
+            <p className="text-red-800 dark:text-red-200">
+              Failed to load news: {error instanceof Error ? error.message : 'Unknown error'}
+            </p>
+          </div>
+        )}
+
+        {newsData && (
+          <>
+            {/* Categories */}
+            {newsData.categories.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Your Interests
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {newsData.categories.map((category: string) => (
+                    <span
+                      key={category}
+                      className="px-3 py-1 bg-brand-primary/10 text-brand-primary dark:text-brand-secondary rounded-full text-sm font-medium capitalize"
+                    >
+                      {category}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* News Articles */}
+            {newsData.articles.length === 0 ? (
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-12 text-center">
+                <NewspaperIcon className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  News Feed Coming Soon
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Your personalized news feed will appear here. News is currently used for song generation.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {newsData.articles.map((article: NewsArticle, index: number) => (
+                  <a
+                    key={index}
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all overflow-hidden"
+                  >
+                    {article.image_url && (
+                      <div className="aspect-video overflow-hidden bg-gray-200 dark:bg-gray-700">
+                        <img
+                          src={article.image_url}
+                          alt={article.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-brand-primary transition-colors">
+                        {article.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                        {article.description}
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
+                        <span className="font-medium">{article.source}</span>
+                        <div className="flex items-center gap-1">
+                          <ClockIcon className="w-3 h-3" />
+                          <span>{formatDate(article.published_at)}</span>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center gap-1 text-brand-primary text-sm font-medium">
+                        <span>Read more</span>
+                        <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </DashboardLayout>
   )

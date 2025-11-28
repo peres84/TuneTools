@@ -450,7 +450,7 @@
   - **Property 48: Social Share Preview Content**
   - **Validates: Requirements 11.4**
 
-- [ ] 27. Implement news, calendar, settings, and profile tabs
+- [x] 27. Implement news, calendar, settings, and profile tabs
   - Create News tab component displaying aggregated news
   - Create Calendar tab component displaying synced activities
   - Create Settings tab component for preferences modification
