@@ -303,19 +303,17 @@ async def create_user_preferences(
 @SlowLimiter.limit("10/minute")
 async def get_user_news(
     request: Request,
-    location: Optional[str] = None,
     max_articles: int = 12,
     user_id: str = Depends(get_current_user)
 ):
     """
     Get personalized news articles for the user
     
-    Fetches news based on user's category preferences with 70/30 distribution:
+    Fetches worldwide news based on user's category preferences with 70/30 distribution:
     - 70% from user's preferred categories
     - 30% from general news
     
     Args:
-        location: Country code (e.g., "US", "GB") - defaults to "US"
         max_articles: Maximum number of articles to return (default: 12)
         user_id: Authenticated user ID
         
@@ -340,14 +338,14 @@ async def get_user_news(
         
         user_categories = prefs_response.data.get("categories", ["general"])
         
-        # Fetch news articles
+        # Fetch worldwide news (no location restriction)
         articles = news_service.fetch_news(
             user_categories=user_categories,
-            location=location or "US",
+            location="",  # Empty string for worldwide news
             max_articles=max_articles
         )
         
-        log_handler.info(f"[NEWS] Fetched {len(articles)} articles for user {user_id}")
+        log_handler.info(f"[NEWS] Fetched {len(articles)} worldwide articles for user {user_id}")
         
         return {
             "articles": [article.dict() for article in articles],
