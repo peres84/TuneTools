@@ -72,4 +72,31 @@
   .animate-spin-slow {
     animation: spin-slow 3s linear infinite;
   }
+  
+  /* Custom scrollbar styles */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-200 dark:bg-gray-700 rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-brand-primary rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-secondary;
+  }
+  
+  /* Firefox scrollbar */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #FF6B6B #E5E7EB;
+  }
+  
+  .dark .custom-scrollbar {
+    scrollbar-color: #FF6B6B #374151;
+  }
 }

@@ -97,7 +97,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Navigation tabs - scrollable if needed */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
             {tabs.map((tab) => {
               const Icon = tab.icon
               const active = isActiveTab(tab.path)
@@ -148,9 +148,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
 
       {/* Main content */}
-      <div className="lg:ml-64">
+      <div className="lg:ml-64 min-h-screen flex flex-col">
         {/* Mobile header */}
-        <header className="lg:hidden bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between">
+        <header className="lg:hidden bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -164,8 +164,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="w-10" /> {/* Spacer for centering */}
         </header>
 
-        {/* Page content */}
-        <main className="p-4 lg:p-8">
+        {/* Page content - scrollable */}
+        <main className="flex-1 p-4 lg:p-8 overflow-y-auto custom-scrollbar">
           {children}
         </main>
       </div>
