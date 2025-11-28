@@ -128,6 +128,19 @@ export function CalendarPage() {
     return new Date().toISOString().split('T')[0]
   }
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    
+    // Clear cache
+    const cacheKey = `${CACHE_KEYS.CALENDAR_ACTIVITIES}_${viewMode}`
+    cacheManager.remove(cacheKey)
+    
+    // Refetch data
+    await queryClient.invalidateQueries({ queryKey: ['userCalendar', viewMode] })
+    
+    setTimeout(() => setIsRefreshing(false), 500)
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto">
