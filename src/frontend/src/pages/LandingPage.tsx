@@ -5,17 +5,6 @@ import logoDisk from '../assets/logo-disk.png'
 
 export function LandingPage() {
   const [currentStep, setCurrentStep] = useState(0)
-  const { signOut } = useAuth()
-
-  // Clear any existing session when landing on the promotional page
-  // This ensures users start fresh when visiting the marketing site
-  useEffect(() => {
-    const clearSession = async () => {
-      console.log('🧹 LandingPage: Clearing any existing session...')
-      await signOut()
-    }
-    clearSession()
-  }, [signOut])
 
   const steps = [
     {
