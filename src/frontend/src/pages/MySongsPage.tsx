@@ -4,9 +4,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { SongList } from '../components/SongList'
 import { AlbumCollection } from '../components/AlbumCollection'
-import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { AlbumSkeleton, SongSkeleton } from '../components/LoadingSkeletons'
-import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
+import { ArrowPathIcon } from '@heroicons/react/24/outline'
+import { SongSkeleton } from '../components/LoadingSkeletons'
 import { cacheManager, CACHE_KEYS } from '../utils/cacheManager'
 
 export function MySongsPage() {
@@ -100,10 +99,10 @@ export function MySongsPage() {
   if (selectedAlbumId) {
     return (
       <DashboardLayout>
-        <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
           <button
             onClick={handleBackToOverview}
-            className="mb-6 flex items-center gap-2 text-brand-primary hover:text-brand-primary/80 transition-colors"
+            className="mb-6 flex items-center gap-2 text-brand-primary hover:text-brand-primary/80 transition-colors font-medium"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -131,10 +130,10 @@ export function MySongsPage() {
   // Default view: show both albums and all songs
   return (
     <DashboardLayout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto">
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-4xl font-bold text-brand-primary mb-2">
               My Music
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
@@ -144,17 +143,17 @@ export function MySongsPage() {
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ArrowPathIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
 
         {/* Albums Section */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-brand-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <h2 className="text-2xl font-bold text-brand-primary mb-6 flex items-center gap-2">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
             Albums
@@ -164,8 +163,8 @@ export function MySongsPage() {
 
         {/* Songs Section */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-brand-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <h2 className="text-2xl font-bold text-brand-primary mb-6 flex items-center gap-2">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
             </svg>
             All Songs
