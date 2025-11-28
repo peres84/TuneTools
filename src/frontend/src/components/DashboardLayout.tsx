@@ -72,7 +72,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-800 shadow-lg z-50
+          fixed top-0 left-0 h-screen w-64 bg-white dark:bg-gray-800 shadow-lg z-50
           transform transition-transform duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
@@ -80,7 +80,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         <div className="flex flex-col h-full">
           {/* Logo, theme toggle, and close button */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div className="flex items-center gap-2">
               <img src={logoDisk} alt="TuneTools Logo" className="w-8 h-8" />
               <h1 className="text-xl font-bold text-brand-primary">TuneTools</h1>
@@ -96,8 +96,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </div>
 
-          {/* Navigation tabs */}
-          <nav className="flex-1 p-4 space-y-2">
+          {/* Navigation tabs - scrollable if needed */}
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon
               const active = isActiveTab(tab.path)
@@ -121,10 +121,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             })}
           </nav>
 
-          {/* User section */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          {/* User section - always visible at bottom */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-brand-primary flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-brand-primary flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-semibold">
                   {user?.email?.charAt(0).toUpperCase()}
                 </span>

@@ -152,10 +152,13 @@ class NewsAggregatorService:
         params = {
             "engine": "google_news",
             "q": query,
-            "gl": location.lower(),
             "num": count,
             "api_key": SERPAPI_KEY
         }
+        
+        # Only add location if provided (for worldwide news, omit location)
+        if location and location.strip():
+            params["gl"] = location.lower()
         
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -184,30 +187,45 @@ class NewsAggregatorService:
         count: int
     ) -> List[NewsArticle]:
         """Fetch from NewsAPI"""
-        url = "https://newsapi.org/v2/top-headlines"
-        
-        params = {
-            "apiKey": NEWSAPI_KEY,
-            "country": location.lower(),
-            "pageSize": count
-        }
-        
-        # Add category if specified
-        if categories and len(categories) > 0:
-            # NewsAPI only supports single category
-            # Map common categories to NewsAPI categories
-            category_map = {
-                "technology": "technology",
-                "business": "business",
-                "entertainment": "entertainment",
-                "health": "health",
-                "science": "science",
-                "sports": "sports"
+        # For worldwide news, use 'everything' endpoint instead of 'top-headlines'
+        if not location or not location.strip():
+            url = "https://newsapi.org/v2/everything"
+            params = {
+                "apiKey": NEWSAPI_KEY,
+                "pageSize": count,
+                "sortBy": "publishedAt",
+                "language": "en"
             }
-            for cat in categories:
-                if cat.lower() in category_map:
-                    params["category"] = category_map[cat.lower()]
-                    break
+            
+            # Add category-based query
+            if categories and len(categories) > 0:
+                params["q"] = " OR ".join(categories)
+            else:
+                params["q"] = "news"
+        else:
+            url = "https://newsapi.org/v2/top-headlines"
+            params = {
+                "apiKey": NEWSAPI_KEY,
+                "country": location.lower(),
+                "pageSize": count
+            }
+            
+            # Add category if specified
+            if categories and len(categories) > 0:
+                # NewsAPI only supports single category
+                # Map common categories to NewsAPI categories
+                category_map = {
+                    "technology": "technology",
+                    "business": "business",
+                    "entertainment": "entertainment",
+                    "health": "health",
+                    "science": "science",
+                    "sports": "sports"
+                }
+                for cat in categories:
+                    if cat.lower() in category_map:
+                        params["category"] = category_map[cat.lower()]
+                        break
         
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -247,11 +265,14 @@ class NewsAggregatorService:
         params = {
             "api-key": WORLDNEWS_API_KEY,
             "text": query,
-            "source-countries": location.lower(),
             "number": count,
             "sort": "publish-time",
             "sort-direction": "DESC"
         }
+        
+        # Only add location if provided (for worldwide news, omit location)
+        if location and location.strip():
+            params["source-countries"] = location.lower()
         
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()

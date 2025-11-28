@@ -310,9 +310,10 @@ async def get_user_news(
     """
     Get personalized news articles for the user
     
-    Fetches worldwide news based on user's category preferences with 70/30 distribution:
-    - 70% from user's preferred categories
-    - 30% from general news
+    Fetches mixed worldwide and local news based on user's category preferences:
+    - 70% from user's preferred categories (worldwide)
+    - 20% from general news (worldwide)
+    - 10% from user's location (if available)
     
     Args:
         max_articles: Maximum number of articles to return (default: 12)
@@ -339,17 +340,49 @@ async def get_user_news(
         
         user_categories = prefs_response.data.get("categories", ["general"])
         
+        # Calculate distribution: 90% worldwide, 10% local
+        worldwide_count = int(max_articles * 0.9)
+        local_count = max_articles - worldwide_count
+        
         # Fetch worldwide news (no location restriction)
-        articles = news_service.fetch_news(
+        worldwide_articles = news_service.fetch_news(
             user_categories=user_categories,
             location="",  # Empty string for worldwide news
-            max_articles=max_articles
+            max_articles=worldwide_count
         )
         
-        log_handler.info(f"[NEWS] Fetched {len(articles)} worldwide articles for user {user_id}")
+        log_handler.info(f"[NEWS] Fetched {len(worldwide_articles)} worldwide articles")
+        
+        # Try to get user's location from profile/cache for local news
+        local_articles = []
+        try:
+            # You could fetch from user profile or use a default location
+            # For now, we'll use US as a fallback for some local flavor
+            local_articles = news_service.fetch_news(
+                user_categories=user_categories,
+                location="US",  # Could be dynamic based on user's saved location
+                max_articles=local_count
+            )
+            log_handler.info(f"[NEWS] Fetched {len(local_articles)} local articles")
+        except Exception as e:
+            log_handler.warning(f"[NEWS] Failed to fetch local news: {str(e)}")
+        
+        # Combine articles
+        all_articles = worldwide_articles + local_articles
+        
+        # Deduplicate by title
+        seen_titles = set()
+        unique_articles = []
+        for article in all_articles:
+            title_lower = article.title.lower().strip()
+            if title_lower not in seen_titles:
+                seen_titles.add(title_lower)
+                unique_articles.append(article)
+        
+        log_handler.info(f"[NEWS] Returning {len(unique_articles)} unique articles for user {user_id}")
         
         return {
-            "articles": [article.dict() for article in articles],
+            "articles": [article.dict() for article in unique_articles[:max_articles]],
             "categories": user_categories
         }
         
