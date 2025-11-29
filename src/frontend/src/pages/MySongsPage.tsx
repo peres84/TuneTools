@@ -88,10 +88,18 @@ export function MySongsPage() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
+    
+    // Clear cache first
+    cacheManager.remove(CACHE_KEYS.SONGS_LIST)
+    cacheManager.remove(CACHE_KEYS.ALBUMS_LIST)
+    
+    // Then invalidate queries to refetch
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['albums'] }),
-      queryClient.invalidateQueries({ queryKey: ['allSongs'] })
+      queryClient.invalidateQueries({ queryKey: ['allSongs'] }),
+      queryClient.invalidateQueries({ queryKey: ['album', selectedAlbumId] })
     ])
+    
     setTimeout(() => setIsRefreshing(false), 500)
   }
 

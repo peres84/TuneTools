@@ -68,7 +68,7 @@
             "endpoint_route": "/generate"
         },
         "songs_list_endpoint": {
-            "request_limit": 20,
+            "request_limit": 15,
             "unit_of_time_for_limit": "minute",
             "endpoint_prefix": "/api/songs",
             "endpoint_tag": "songs",
@@ -82,14 +82,14 @@
             "endpoint_route": "/today"
         },
         "songs_get_endpoint": {
-            "request_limit": 20,
+            "request_limit": 15,
             "unit_of_time_for_limit": "minute",
             "endpoint_prefix": "/api/songs",
             "endpoint_tag": "songs",
             "endpoint_route": "/{song_id}"
         },
         "albums_list_endpoint": {
-            "request_limit": 20,
+            "request_limit": 15,
             "unit_of_time_for_limit": "minute",
             "endpoint_prefix": "/api/albums",
             "endpoint_tag": "albums",
@@ -103,7 +103,7 @@
             "endpoint_route": "/current"
         },
         "albums_get_endpoint": {
-            "request_limit": 20,
+            "request_limit": 15,
             "unit_of_time_for_limit": "minute",
             "endpoint_prefix": "/api/albums",
             "endpoint_tag": "albums",
