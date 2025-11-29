@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  tunetools-backend:
+    build: .
+    container_name: tunetools-backend
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+# For production with Redis (optional)
+# Uncomment if you need Redis for caching
+#  redis:
+#    image: redis:7-alpine
+#    container_name: tunetools-redis
+#    ports:
+#      - "6379:6379"
+#    volumes:
+#      - redis-data:/data
+#    restart: unless-stopped
+
+#volumes:
+#  redis-data:

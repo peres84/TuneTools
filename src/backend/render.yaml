@@ -1,0 +1,47 @@
+# TuneTools Backend Render Configuration
+# 
+# DEPLOYMENT SETUP:
+# 1. In Render dashboard, set "Root Directory" to: src/backend
+# 2. Render will use this file automatically
+# 3. All paths below are relative to src/backend/
+#
+# This is the RECOMMENDED approach for monorepo deployments
+
+services:
+  - type: web
+    name: tunetools-backend
+    env: python
+    runtime: python
+    region: oregon
+    plan: free
+    branch: main
+    # Paths are relative to src/backend/ (set as Root Directory in Render)
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers --forwarded-allow-ips='*'
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PORT
+        value: 8000
+      - key: PYTHONUNBUFFERED
+        value: 1
+      # Add these in Render dashboard:
+      # - SUPABASE_URL
+      # - SUPABASE_SERVICE_ROLE_KEY
+      # - SUPABASE_JWT_SECRET
+      # - SUPABASE_PROJECT_ID
+      # - RUNPOD_API_KEY
+      # - ENDPOINT_ID
+      # - OPENWEATHER_API_KEY
+      # - SERPAPI_API_KEY
+      # - NEWSAPI_API_KEY
+      # - WORLDNEWS_API_KEY
+      # - GOOGLE_CLOUD_API_KEY
+      # - GOOGLE_CLIENT_ID
+      # - GOOGLE_CLIENT_SECRET
+      # - GOOGLE_REDIRECT_URI (https://your-app.onrender.com/api/calendar/callback)
+      # - FRONTEND_URL (https://your-app.vercel.app)
+      # - OPENAI_API_KEY
+      # - GEMINI_API_KEY
