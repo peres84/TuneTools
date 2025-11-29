@@ -30,12 +30,12 @@ export function CalendarPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const { data: calendarData, isLoading, error } = useQuery({
-    queryKey: ['userCalendar', viewMode],
+    queryKey: ['userCalendar'],
     queryFn: async () => {
       if (!session?.access_token) return null
 
-      // Try cache first
-      const cacheKey = `${CACHE_KEYS.CALENDAR_ACTIVITIES}_${viewMode}`
+      // Try cache first (cache for 5 minutes)
+      const cacheKey = CACHE_KEYS.CALENDAR_ACTIVITIES
       const cached = cacheManager.get<CalendarData>(cacheKey, 5)
       if (cached) {
         return cached
@@ -66,10 +66,10 @@ export function CalendarPage() {
         }
       }
 
-      // Fetch calendar activities (1 day, 7 days, or 30 days)
-      const daysAhead = viewMode === 'day' ? 1 : viewMode === 'week' ? 7 : 30
+      // Fetch 3 months of calendar activities (previous + current + next month)
+      // This gives us the exact date range for all days in these 3 months
       const activitiesResponse = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/activities?days_ahead=${daysAhead}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/activities?months=3`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`
@@ -89,7 +89,7 @@ export function CalendarPage() {
         total_count: activitiesData.total_count || 0
       }
 
-      // Cache the result
+      // Cache the result for 5 minutes
       cacheManager.set(cacheKey, result, 5)
 
       return result
@@ -101,11 +101,6 @@ export function CalendarPage() {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   }
 
   const formatDateShort = (dateString: string) => {
@@ -126,19 +121,6 @@ export function CalendarPage() {
       const date = new Date(monday)
       date.setDate(monday.getDate() + i)
       dates.push(date.toISOString().split('T')[0])
-    }
-    return dates
-  }
-
-  const getMonthDates = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    
-    const dates = []
-    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
-      dates.push(new Date(d).toISOString().split('T')[0])
     }
     return dates
   }
@@ -176,19 +158,58 @@ export function CalendarPage() {
 
   const navigateDay = (direction: 'prev' | 'next') => {
     const newDate = new Date(selectedDate)
+    const today = new Date()
+    
+    // Calculate the target day
     newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1))
+    
+    // Restrict to first day of previous month and last day of next month
+    const minDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+    const maxDate = new Date(today.getFullYear(), today.getMonth() + 2, 0) // Last day of next month
+    
+    // Don't allow navigation beyond limits
+    if (newDate < minDate || newDate > maxDate) {
+      return
+    }
+    
     setSelectedDate(newDate)
   }
 
   const navigateWeek = (direction: 'prev' | 'next') => {
     const newDate = new Date(selectedDate)
+    const today = new Date()
+    
+    // Calculate the target week
     newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7))
+    
+    // Restrict to first day of previous month and last day of next month
+    const minDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+    const maxDate = new Date(today.getFullYear(), today.getMonth() + 2, 0) // Last day of next month
+    
+    // Don't allow navigation beyond limits
+    if (newDate < minDate || newDate > maxDate) {
+      return
+    }
+    
     setSelectedDate(newDate)
   }
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     const newDate = new Date(selectedDate)
+    const today = new Date()
+    
+    // Calculate the target month
     newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1))
+    
+    // Restrict to previous month, current month, and next month only
+    const minDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+    const maxDate = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+    
+    // Don't allow navigation beyond limits
+    if (newDate < minDate || newDate > maxDate) {
+      return
+    }
+    
     setSelectedDate(newDate)
   }
 
@@ -200,11 +221,10 @@ export function CalendarPage() {
     setIsRefreshing(true)
     
     // Clear cache
-    const cacheKey = `${CACHE_KEYS.CALENDAR_ACTIVITIES}_${viewMode}`
-    cacheManager.remove(cacheKey)
+    cacheManager.remove(CACHE_KEYS.CALENDAR_ACTIVITIES)
     
     // Refetch data
-    await queryClient.invalidateQueries({ queryKey: ['userCalendar', viewMode] })
+    await queryClient.invalidateQueries({ queryKey: ['userCalendar'] })
     
     setTimeout(() => setIsRefreshing(false), 500)
   }
@@ -360,27 +380,29 @@ export function CalendarPage() {
             </div>
 
             {/* Calendar View */}
-            {calendarData.total_count === 0 ? (
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-12 text-center">
-                <CalendarIcon className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  No Upcoming Activities
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Your calendar is empty for {viewMode === 'day' ? 'this day' : viewMode === 'week' ? 'this week' : 'this month'}. Activities will appear here when scheduled.
-                </p>
-              </div>
-            ) : viewMode === 'day' ? (
+            {viewMode === 'day' ? (
               /* Day View */
-              <div className="space-y-4">
-                {Object.entries(calendarData.activities)
-                  .filter(([date]) => date === selectedDate.toISOString().split('T')[0])
-                  .map(([date, activities]) => (
-                    <div key={date}>
-                      {(activities as CalendarActivity[]).map((activity, index) => (
+              (() => {
+                const dateKey = selectedDate.toISOString().split('T')[0]
+                const dayActivities = (calendarData.activities[dateKey] || []) as CalendarActivity[]
+                
+                return (
+                  <div className="space-y-4">
+                    {dayActivities.length === 0 ? (
+                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
+                        <CalendarIcon className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                          No Events Scheduled
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                          You have no activities scheduled for this day.
+                        </p>
+                      </div>
+                    ) : (
+                      dayActivities.map((activity, index) => (
                         <div
                           key={index}
-                          className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow mb-4"
+                          className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
                         >
                           <div className="flex items-start gap-4">
                             <div className="flex-shrink-0">
@@ -417,10 +439,11 @@ export function CalendarPage() {
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ))}
-              </div>
+                      ))
+                    )}
+                  </div>
+                )
+              })()
             ) : viewMode === 'week' ? (
               /* Week View */
               <div className="space-y-6">

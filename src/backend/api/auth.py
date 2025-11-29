@@ -42,6 +42,41 @@ async def signup(request: Request, signup_data: SignupRequest):
     try:
         log_handler.info(f"[AUTH] Signup attempt for: {signup_data.email}")
         
+        # Check if user already exists (using admin API)
+        from supabase import create_client
+        import os
+        
+        supabase_url = os.getenv("SUPABASE_URL")
+        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        
+        if supabase_url and service_role_key:
+            try:
+                admin_client = create_client(supabase_url, service_role_key)
+                existing_users = admin_client.auth.admin.list_users()
+                
+                # Check if email already exists
+                for user in existing_users:
+                    if user.email and user.email.lower() == signup_data.email.lower():
+                        if user.email_confirmed_at:
+                            # Email is confirmed, user should login
+                            log_handler.warning(f"[AUTH] Signup attempt with existing confirmed email: {signup_data.email}")
+                            raise HTTPException(
+                                status_code=409, 
+                                detail="This email is already registered and confirmed. Please log in instead."
+                            )
+                        else:
+                            # Email exists but not confirmed
+                            log_handler.warning(f"[AUTH] Signup attempt with existing unconfirmed email: {signup_data.email}")
+                            raise HTTPException(
+                                status_code=409,
+                                detail="This email is already registered but not confirmed. Please check your email for the confirmation link, or contact support if you need a new confirmation email."
+                            )
+            except HTTPException:
+                raise
+            except Exception as check_error:
+                # If check fails, continue with signup attempt
+                log_handler.warning(f"[AUTH] Could not check existing users: {str(check_error)}")
+        
         # Sign up user with Supabase
         response = supabase.auth.sign_up({
             "email": signup_data.email,

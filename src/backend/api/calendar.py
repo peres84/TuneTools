@@ -106,25 +106,65 @@ async def get_calendar_status(
 @router.get("/activities")
 async def get_calendar_activities(
     user_id: str = Depends(get_current_user),
-    days_ahead: int = Query(1, ge=1, le=30, description="Number of days to fetch (1-30)")
+    days_ahead: int = Query(None, ge=1, le=90, description="Number of days to fetch (1-90, deprecated)"),
+    months: int = Query(3, ge=1, le=3, description="Number of months to fetch (1-3, centered on current month)")
 ):
     """
-    Get calendar activities for the specified number of days
+    Get calendar activities for the specified number of months
     
     Args:
-        days_ahead: Number of days to look ahead (default: 1, max: 30)
+        days_ahead: (Deprecated) Number of days to look ahead
+        months: Number of months to fetch (default: 3 = previous + current + next month)
     
     Returns:
         dict: Calendar activities grouped by date
     """
     from utils.custom_logger import log_handler
+    from datetime import datetime, timedelta
+    import calendar as cal
     
     try:
-        log_handler.info(f"[CALENDAR] Fetching activities for user {user_id}, days_ahead={days_ahead}")
+        # Calculate date range based on months
+        today = datetime.now()
+        current_year = today.year
+        current_month = today.month
+        
+        if months == 1:
+            # Current month only
+            start_date = datetime(current_year, current_month, 1)
+            last_day = cal.monthrange(current_year, current_month)[1]
+            end_date = datetime(current_year, current_month, last_day)
+        elif months == 2:
+            # Current month + next month
+            start_date = datetime(current_year, current_month, 1)
+            next_month = current_month + 1 if current_month < 12 else 1
+            next_year = current_year if current_month < 12 else current_year + 1
+            last_day = cal.monthrange(next_year, next_month)[1]
+            end_date = datetime(next_year, next_month, last_day)
+        else:  # months == 3 (default)
+            # Previous month + current month + next month
+            prev_month = current_month - 1 if current_month > 1 else 12
+            prev_year = current_year if current_month > 1 else current_year - 1
+            start_date = datetime(prev_year, prev_month, 1)
+            
+            next_month = current_month + 1 if current_month < 12 else 1
+            next_year = current_year if current_month < 12 else current_year + 1
+            last_day = cal.monthrange(next_year, next_month)[1]
+            end_date = datetime(next_year, next_month, last_day)
+        
+        # Calculate days_ahead from date range
+        calculated_days_ahead = (end_date - today).days + 1
+        
+        # Use days_ahead parameter if provided (for backward compatibility)
+        if days_ahead is not None:
+            calculated_days_ahead = days_ahead
+        
+        log_handler.info(f"[CALENDAR] Fetching activities for user {user_id}, months={months}, days={calculated_days_ahead}")
+        log_handler.info(f"[CALENDAR] Date range: {start_date.date()} to {end_date.date()}")
         
         activities = await calendar_service.get_calendar_activities(
             user_id=user_id,
-            days_ahead=days_ahead
+            days_ahead=calculated_days_ahead
         )
         
         log_handler.info(f"[CALENDAR] Retrieved {len(activities)} activities from service")
