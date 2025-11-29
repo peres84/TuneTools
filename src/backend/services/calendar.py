@@ -149,7 +149,8 @@ class CalendarService:
     async def get_calendar_activities(
         self,
         user_id: str,
-        days_ahead: int = 1
+        days_ahead: int = 1,
+        days_behind: int = 30
     ) -> List[CalendarActivity]:
         """
         Fetch upcoming calendar activities
@@ -204,8 +205,8 @@ class CalendarService:
                     print(f"[OK] Token still valid")
             
             # Fetch calendar events
-            print(f"[INFO] Fetching calendar events for {days_ahead} days ahead...")
-            activities = await self._fetch_events(access_token, days_ahead)
+            print(f"[INFO] Fetching calendar events: {days_behind} days behind to {days_ahead} days ahead...")
+            activities = await self._fetch_events(access_token, days_ahead, days_behind=days_behind)
             print(f"[OK] Fetched {len(activities)} activities")
             return activities
             
@@ -255,7 +256,8 @@ class CalendarService:
     async def _fetch_events(
         self,
         access_token: str,
-        days_ahead: int
+        days_ahead: int,
+        days_behind: int = 30
     ) -> List[CalendarActivity]:
         """
         Fetch calendar events from Google Calendar API
@@ -263,14 +265,15 @@ class CalendarService:
         Args:
             access_token: Google access token
             days_ahead: Number of days to look ahead
+            days_behind: Number of days to look behind (default: 30)
             
         Returns:
             List[CalendarActivity]: Calendar activities
         """
         import requests
         
-        # Calculate time range
-        time_min = datetime.utcnow().isoformat() + "Z"
+        # Calculate time range - include past events for calendar view
+        time_min = (datetime.utcnow() - timedelta(days=days_behind)).isoformat() + "Z"
         time_max = (datetime.utcnow() + timedelta(days=days_ahead)).isoformat() + "Z"
         
         url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
@@ -280,7 +283,7 @@ class CalendarService:
             "timeMax": time_max,
             "singleEvents": True,
             "orderBy": "startTime",
-            "maxResults": 10
+            "maxResults": 100  # Increased to handle 3 months of events
         }
         
         try:

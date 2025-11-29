@@ -11,6 +11,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SongPlayerPage } from './pages/SongPlayerPage'
 import { SharedSongPage } from './pages/SharedSongPage'
+import { OAuthCallbackPage } from './pages/OAuthCallbackPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { OfflineBanner } from './components/OfflineBanner'
 
@@ -32,6 +33,7 @@ function App() {
           <Route path="/dashboard/profile" element={<ProfilePage />} />
           <Route path="/song/:songId" element={<SongPlayerPage />} />
           <Route path="/share/:shareToken" element={<SharedSongPage />} />
+          <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
         </Routes>
       </div>
     </ErrorBoundary>

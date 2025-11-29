@@ -56,15 +56,15 @@ async def handle_oauth_callback(
         # Exchange code for tokens and store
         await calendar_service.handle_oauth_callback(code, state)
         
-        # Redirect to frontend with success message
+        # Redirect to OAuth callback page with success message
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-        return RedirectResponse(url=f"{frontend_url}/settings?calendar=success")
+        return RedirectResponse(url=f"{frontend_url}/oauth/callback?calendar=success")
         
     except Exception as e:
-        # Redirect to frontend with error message
+        # Redirect to OAuth callback page with error message
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
         error_msg = str(e).replace(" ", "+")
-        return RedirectResponse(url=f"{frontend_url}/settings?calendar=error&message={error_msg}")
+        return RedirectResponse(url=f"{frontend_url}/oauth/callback?calendar=error&message={error_msg}")
 
 
 @router.get("/status")
@@ -152,19 +152,23 @@ async def get_calendar_activities(
             last_day = cal.monthrange(next_year, next_month)[1]
             end_date = datetime(next_year, next_month, last_day)
         
-        # Calculate days_ahead from date range
+        # Calculate days_ahead and days_behind from date range
         calculated_days_ahead = (end_date - today).days + 1
+        calculated_days_behind = (today - start_date).days
         
         # Use days_ahead parameter if provided (for backward compatibility)
         if days_ahead is not None:
             calculated_days_ahead = days_ahead
+            calculated_days_behind = 30  # Default for backward compatibility
         
-        log_handler.info(f"[CALENDAR] Fetching activities for user {user_id}, months={months}, days={calculated_days_ahead}")
+        log_handler.info(f"[CALENDAR] Fetching activities for user {user_id}, months={months}")
         log_handler.info(f"[CALENDAR] Date range: {start_date.date()} to {end_date.date()}")
+        log_handler.info(f"[CALENDAR] Days behind: {calculated_days_behind}, Days ahead: {calculated_days_ahead}")
         
         activities = await calendar_service.get_calendar_activities(
             user_id=user_id,
-            days_ahead=calculated_days_ahead
+            days_ahead=calculated_days_ahead,
+            days_behind=calculated_days_behind
         )
         
         log_handler.info(f"[CALENDAR] Retrieved {len(activities)} activities from service")

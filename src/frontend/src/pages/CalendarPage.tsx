@@ -128,25 +128,51 @@ export function CalendarPage() {
   const getMonthCalendarGrid = (date: Date) => {
     const year = date.getFullYear()
     const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
+    
+    // Use noon to avoid timezone issues
+    const firstDay = new Date(year, month, 1, 12, 0, 0)
+    const lastDay = new Date(year, month + 1, 0, 12, 0, 0)
     
     // Get day of week for first day (0 = Sunday, 1 = Monday, etc.)
     let firstDayOfWeek = firstDay.getDay()
     // Convert to Monday = 0, Sunday = 6
     firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
     
-    // Create grid with empty cells for days before month starts
-    const grid: (string | null)[] = []
+    const grid: { date: string; isCurrentMonth: boolean }[] = []
     
-    // Add empty cells for days before month starts
-    for (let i = 0; i < firstDayOfWeek; i++) {
-      grid.push(null)
+    // Add days from previous month to fill the first week
+    if (firstDayOfWeek > 0) {
+      const prevMonth = month === 0 ? 11 : month - 1
+      const prevYear = month === 0 ? year - 1 : year
+      const prevMonthLastDay = new Date(prevYear, prevMonth + 1, 0).getDate()
+      const startDay = prevMonthLastDay - firstDayOfWeek + 1
+      
+      for (let day = startDay; day <= prevMonthLastDay; day++) {
+        const d = new Date(prevYear, prevMonth, day, 12, 0, 0)
+        const dateStr = d.toISOString().split('T')[0]
+        grid.push({ date: dateStr, isCurrentMonth: false })
+      }
     }
     
-    // Add all days of the month
-    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
-      grid.push(new Date(d).toISOString().split('T')[0])
+    // Add all days of the current month
+    const daysInMonth = lastDay.getDate()
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(year, month, day, 12, 0, 0)
+      const dateStr = d.toISOString().split('T')[0]
+      grid.push({ date: dateStr, isCurrentMonth: true })
+    }
+    
+    // Add days from next month to complete the grid (up to 42 cells = 6 weeks)
+    const remainingCells = 42 - grid.length
+    if (remainingCells > 0) {
+      const nextMonth = month === 11 ? 0 : month + 1
+      const nextYear = month === 11 ? year + 1 : year
+      
+      for (let day = 1; day <= remainingCells; day++) {
+        const d = new Date(nextYear, nextMonth, day, 12, 0, 0)
+        const dateStr = d.toISOString().split('T')[0]
+        grid.push({ date: dateStr, isCurrentMonth: false })
+      }
     }
     
     return grid
@@ -203,7 +229,7 @@ export function CalendarPage() {
     
     // Restrict to previous month, current month, and next month only
     const minDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    const maxDate = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+    const maxDate = new Date(today.getFullYear(), today.getMonth() + 2, 0) // Last day of next month
     
     // Don't allow navigation beyond limits
     if (newDate < minDate || newDate > maxDate) {
@@ -275,7 +301,7 @@ export function CalendarPage() {
               Connect your Google Calendar to see your activities here and include them in song generation.
             </p>
             <a
-              href="/settings"
+              href="/dashboard/settings"
               className="inline-flex items-center gap-2 px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 active:scale-95 transition-all font-semibold"
             >
               <LinkIcon className="w-5 h-5" />
@@ -516,17 +542,9 @@ export function CalendarPage() {
                 
                 {/* Calendar Grid */}
                 <div className="grid grid-cols-7 border-l border-t border-gray-200 dark:border-gray-700">
-                  {getMonthCalendarGrid(selectedDate).map((dateKey, index) => {
-                    if (!dateKey) {
-                      // Empty cell for days before month starts
-                      return (
-                        <div
-                          key={`empty-${index}`}
-                          className="min-h-24 border-r border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
-                        />
-                      )
-                    }
-                    
+                  {getMonthCalendarGrid(selectedDate).map((cell) => {
+                    const dateKey = cell.date
+                    const isCurrentMonth = cell.isCurrentMonth
                     const dayActivities = (calendarData.activities[dateKey] || []) as CalendarActivity[]
                     const date = new Date(dateKey)
                     const isToday = dateKey === getTodayKey()
@@ -535,12 +553,20 @@ export function CalendarPage() {
                     return (
                       <div
                         key={dateKey}
-                        className={`min-h-24 border-r border-b border-gray-200 dark:border-gray-700 p-2 ${
-                          isToday ? 'bg-brand-primary/10 dark:bg-brand-primary/20' : 'bg-white dark:bg-gray-800'
-                        } hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}
+                        className={`min-h-24 border-r border-b border-gray-200 dark:border-gray-700 p-2 transition-colors ${
+                          isToday 
+                            ? 'bg-brand-primary/10 dark:bg-brand-primary/20' 
+                            : isCurrentMonth
+                            ? 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            : 'bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }`}
                       >
                         <div className={`text-sm font-semibold mb-1 ${
-                          isToday ? 'text-brand-primary' : 'text-gray-700 dark:text-gray-300'
+                          isToday 
+                            ? 'text-brand-primary' 
+                            : isCurrentMonth
+                            ? 'text-gray-700 dark:text-gray-300'
+                            : 'text-gray-400 dark:text-gray-600'
                         }`}>
                           {dayNumber}
                           {isToday && <span className="ml-1 text-xs">(Today)</span>}
@@ -551,7 +577,11 @@ export function CalendarPage() {
                             {dayActivities.slice(0, 3).map((activity, idx) => (
                               <div
                                 key={idx}
-                                className="text-xs p-1 rounded bg-brand-primary/20 dark:bg-brand-primary/30 text-gray-900 dark:text-white truncate"
+                                className={`text-xs p-1 rounded truncate ${
+                                  isCurrentMonth
+                                    ? 'bg-brand-primary/20 dark:bg-brand-primary/30 text-gray-900 dark:text-white'
+                                    : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                                }`}
                                 title={activity.title}
                               >
                                 <div className="flex items-center gap-1">
@@ -565,7 +595,11 @@ export function CalendarPage() {
                               </div>
                             ))}
                             {dayActivities.length > 3 && (
-                              <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                              <div className={`text-xs font-medium ${
+                                isCurrentMonth
+                                  ? 'text-gray-600 dark:text-gray-400'
+                                  : 'text-gray-500 dark:text-gray-600'
+                              }`}>
                                 +{dayActivities.length - 3} more
                               </div>
                             )}
