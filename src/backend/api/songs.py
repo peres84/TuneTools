@@ -11,7 +11,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form
 from typing import Optional
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from models.song import Song, SongCreate, SongResponse
 from models.context import ContextData, WeatherData, NewsArticle
@@ -81,6 +81,36 @@ async def generate_song(
     
     try:
         log_handler.info(f"[MUSIC] Starting song generation for user {user_id}")
+        
+        # Step 0: Check daily limit
+        daily_limit = config['song_generation']['daily_limit_per_user']
+        today = datetime.now().date()
+        today_start = datetime.combine(today, datetime.min.time()).isoformat()
+        
+        # Count songs created today
+        count_response = (
+            supabase.table("songs")
+            .select("id", count="exact")
+            .eq("user_id", user_id)
+            .gte("created_at", today_start)
+            .execute()
+        )
+        
+        songs_today = count_response.count if count_response.count else 0
+        
+        if songs_today >= daily_limit:
+            log_handler.warning(f"[LIMIT] User {user_id} has reached daily limit ({songs_today}/{daily_limit})")
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "message": f"Daily song generation limit reached ({daily_limit} songs per day)",
+                    "songs_today": songs_today,
+                    "daily_limit": daily_limit,
+                    "code": "DAILY_LIMIT_REACHED"
+                }
+            )
+        
+        log_handler.info(f"[LIMIT] User has generated {songs_today}/{daily_limit} songs today")
         
         # Step 1: Aggregate context data
         log_handler.info("[DATA] Step 1: Aggregating context data...")
@@ -481,40 +511,59 @@ async def list_songs(
 )
 async def get_today_song(request: Request, user_id: str = Depends(get_current_user)):
     """
-    Get today's song for the user
+    Get today's songs for the user with daily limit info
     
     Args:
         user_id: Authenticated user ID
         
     Returns:
-        Song or None if no song exists for today
+        Dict with songs, count, and limit information
     """
     try:
         # Get today's date at midnight
         today = datetime.now().date()
         today_start = datetime.combine(today, datetime.min.time()).isoformat()
+        daily_limit = config['song_generation']['daily_limit_per_user']
         
-        # Query for songs created today
+        # Query for all songs created today
         response = (
             supabase.table("songs")
             .select("*")
             .eq("user_id", user_id)
             .gte("created_at", today_start)
-            .limit(1)
+            .order("created_at", desc=True)
             .execute()
         )
         
-        # Return the first song if it exists
-        if response.data and len(response.data) > 0:
-            return Song(**response.data[0])
+        songs_today = response.data if response.data else []
+        count = len(songs_today)
         
-        # Return None if no song for today (this is valid, not an error)
-        return None
+        # Calculate time until midnight (reset time)
+        tomorrow = datetime.combine(today + timedelta(days=1), datetime.min.time())
+        now = datetime.now()
+        hours_until_reset = int((tomorrow - now).total_seconds() / 3600)
+        minutes_until_reset = int(((tomorrow - now).total_seconds() % 3600) / 60)
+        
+        return {
+            "songs": [Song(**song) for song in songs_today],
+            "count": count,
+            "daily_limit": daily_limit,
+            "limit_reached": count >= daily_limit,
+            "hours_until_reset": hours_until_reset,
+            "minutes_until_reset": minutes_until_reset
+        }
             
     except Exception as e:
-        log_handler.error(f"Error fetching today's song: {str(e)}")
-        # Return None instead of raising error - no song today is valid
-        return None
+        log_handler.error(f"Error fetching today's songs: {str(e)}")
+        # Return empty data instead of raising error
+        return {
+            "songs": [],
+            "count": 0,
+            "daily_limit": config['song_generation']['daily_limit_per_user'],
+            "limit_reached": False,
+            "hours_until_reset": 0,
+            "minutes_until_reset": 0
+        }
 
 
 @router.get("/{song_id}")

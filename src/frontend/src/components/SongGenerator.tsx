@@ -40,8 +40,8 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
   const [overrideVocal, setOverrideVocal] = useState<string>('')
   const [overrideMood, setOverrideMood] = useState<string>('')
 
-  // Query to fetch today's song (cached)
-  const { data: todaySong, isLoading: checkingToday } = useQuery({
+  // Query to fetch today's songs and limit info (cached)
+  const { data: todayData, isLoading: checkingToday } = useQuery({
     queryKey: ['todaySong'],
     queryFn: async () => {
       if (!session?.access_token) return null
@@ -56,8 +56,8 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
       )
 
       if (response.ok) {
-        const song = await response.json()
-        return song && song.id ? song : null
+        const data = await response.json()
+        return data
       }
       return null
     },
@@ -66,6 +66,13 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
     refetchOnMount: true,
     refetchOnWindowFocus: false
   })
+
+  const todaySongs = todayData?.songs || []
+  const songsCount = todayData?.count || 0
+  const dailyLimit = todayData?.daily_limit || 3
+  const limitReached = todayData?.limit_reached || false
+  const hoursUntilReset = todayData?.hours_until_reset || 0
+  const minutesUntilReset = todayData?.minutes_until_reset || 0
 
   // Mutation to generate a new song
   const generateMutation = useMutation({
@@ -137,8 +144,14 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
             let errorCode = ''
             try {
               const errorData = await response.json()
-              errorMessage = errorData.detail || errorMessage
-              errorCode = errorData.code || ''
+              // Handle the detail object from backend
+              if (typeof errorData.detail === 'object') {
+                errorMessage = errorData.detail.message || errorMessage
+                errorCode = errorData.detail.code || ''
+              } else {
+                errorMessage = errorData.detail || errorMessage
+                errorCode = errorData.code || ''
+              }
             } catch {
               errorMessage = `Server error: ${response.status} ${response.statusText}`
             }
@@ -167,8 +180,9 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
       setStatusMessage('Your song is ready!')
       setErrorMessage('')
       setRetryCount(0)
-      // Invalidate and refetch today's song
+      // Invalidate and refetch today's songs data
       queryClient.invalidateQueries({ queryKey: ['todaySong'] })
+      queryClient.invalidateQueries({ queryKey: ['allSongs'] })
       // Notify parent that generation completed
       if (onGenerationComplete) {
         onGenerationComplete(song)
@@ -188,46 +202,72 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
   })
 
   const handleGenerateSong = () => {
-    if (todaySong) {
-      // Song already exists for today
+    if (limitReached) {
+      // Daily limit reached
       return
     }
-    setStatusMessage('Checking if you already have a song for today...')
+    setStatusMessage('Starting song generation...')
     generateMutation.mutate()
   }
 
   return (
     <div className="space-y-6">
-      {/* Today's Song Check */}
-      {todaySong && (
-        <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-500 rounded-lg p-6">
+      {/* Daily Limit Status */}
+      {limitReached && (
+        <div className="bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-500 rounded-lg p-6">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
-              <MusicalNoteIcon className="w-8 h-8 text-green-600 dark:text-green-400" />
+              <ExclamationTriangleIcon className="w-8 h-8 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-2">
-                You already have a song for today!
+              <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                Daily Limit Reached
               </h3>
-              <p className="text-green-800 dark:text-green-200 mb-4">
-                <strong>{todaySong.title}</strong>
+              <p className="text-orange-800 dark:text-orange-200 mb-2">
+                You've generated <strong>{songsCount} out of {dailyLimit}</strong> songs today.
               </p>
-              <p className="text-sm text-green-700 dark:text-green-300 mb-4">
-                {todaySong.description}
+              <p className="text-sm text-orange-700 dark:text-orange-300">
+                Your limit will reset in <strong>{hoursUntilReset}h {minutesUntilReset}m</strong> at midnight.
               </p>
-              <button
-                onClick={() => window.location.href = `/song/${todaySong.id}`}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Listen Now
-              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Today's Songs List */}
+      {todaySongs.length > 0 && !limitReached && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500 rounded-lg p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <MusicalNoteIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                Songs Generated Today ({songsCount}/{dailyLimit})
+              </h3>
+              <div className="space-y-2">
+                {todaySongs.map((song: any) => (
+                  <div key={song.id} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3">
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 dark:text-white">{song.title}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{song.description}</p>
+                    </div>
+                    <button
+                      onClick={() => window.location.href = `/song/${song.id}`}
+                      className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      Listen
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Generation Button */}
-      {!todaySong && !generateMutation.data && (
+      {!generateMutation.data && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
             <SparklesIcon className="w-16 h-16 mx-auto text-brand-primary mb-4" />
@@ -398,7 +438,7 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
           <div className="text-center">
             <button
               onClick={handleGenerateSong}
-              disabled={generateMutation.isPending || checkingToday}
+              disabled={generateMutation.isPending || checkingToday || limitReached}
               className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-brand-primary text-white text-base sm:text-lg font-semibold rounded-lg hover:bg-opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-3 touch-manipulation"
             >
               {generateMutation.isPending || checkingToday ? (
@@ -409,10 +449,15 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
                   </svg>
                   {checkingToday ? 'Checking...' : 'Generating...'}
                 </>
+              ) : limitReached ? (
+                <>
+                  <ExclamationTriangleIcon className="w-6 h-6" />
+                  Daily Limit Reached
+                </>
               ) : (
                 <>
                   <MusicalNoteIcon className="w-6 h-6" />
-                  Generate Song
+                  Generate Song {songsCount > 0 && `(${songsCount}/${dailyLimit})`}
                 </>
               )}
             </button>
