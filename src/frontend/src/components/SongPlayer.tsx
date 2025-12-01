@@ -96,6 +96,34 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  const handleDownload = async () => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(`Download "${song.title}"?\n\nThis will download the song to your device.`)
+    
+    if (!confirmed) return
+    
+    try {
+      // Fetch the audio file as blob to force download
+      const response = await fetch(song.audio_url)
+      const blob = await response.blob()
+      
+      // Create blob URL and trigger download
+      const blobUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = `${song.title.replace(/[^a-z0-9\s]/gi, '_').replace(/\s+/g, '_')}.mp3`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // Clean up blob URL
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      console.error('Download failed:', error)
+      alert('Failed to download song. Please try again.')
+    }
+  }
+
   const handleShare = (platform: string) => {
     const shareUrl = window.location.href
     const shareText = `Check out this song: ${song.title} - ${song.description}`
@@ -275,8 +303,23 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
             />
           </div>
 
-          {/* Share buttons */}
+          {/* Download and Share buttons */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            {/* Download Button */}
+            {!isSharedView && (
+              <div className="mb-6 text-center">
+                <button
+                  onClick={handleDownload}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-primary to-brand-secondary hover:from-brand-primary/90 hover:to-brand-secondary/90 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 font-semibold"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download Song
+                </button>
+              </div>
+            )}
+            
             <p className="text-center text-sm text-gray-600 dark:text-gray-400 mb-4">
               Share this song
             </p>

@@ -444,10 +444,19 @@ async def list_songs(
         
         # Generate signed URLs for all songs
         for song in songs:
-            if song.get('audio_url') and not song['audio_url'].startswith('http'):
+            audio_url = song.get('audio_url')
+            if audio_url:
+                # Extract storage path from URL if it's a full URL
+                storage_path = audio_url
+                if storage_path.startswith('http'):
+                    if '/audio_files/' in storage_path:
+                        storage_path = storage_path.split('/audio_files/')[1].split('?')[0]
+                    else:
+                        continue
+                
                 try:
                     signed_url = supabase.storage.from_("audio_files").create_signed_url(
-                        song['audio_url'],
+                        storage_path,
                         3600  # 1 hour expiry
                     )
                     if signed_url and 'signedURL' in signed_url:

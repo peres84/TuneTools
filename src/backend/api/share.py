@@ -62,10 +62,18 @@ async def get_shared_song(request: Request, share_token: str):
         
         # Generate signed URL for audio (valid for 1 hour)
         audio_url = song_data.get("audio_url")
-        if audio_url and not audio_url.startswith('http'):
+        if audio_url:
+            # Extract storage path from URL if it's a full URL
+            storage_path = audio_url
+            if storage_path.startswith('http'):
+                if '/audio_files/' in storage_path:
+                    storage_path = storage_path.split('/audio_files/')[1].split('?')[0]
+                else:
+                    log_handler.warning(f"Could not extract storage path from URL: {storage_path}")
+            
             try:
                 signed_url = supabase.storage.from_("audio_files").create_signed_url(
-                    audio_url,
+                    storage_path,
                     3600  # 1 hour expiry
                 )
                 if signed_url and 'signedURL' in signed_url:
