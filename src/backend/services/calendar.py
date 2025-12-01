@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 from models.context import CalendarActivity
 from db.supabase_client import supabase
+from utils.custom_logger import log_handler
 
 load_dotenv()
 
@@ -26,7 +27,7 @@ class CalendarService:
     
     def __init__(self):
         if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-            print("[WARN] Google Calendar credentials not configured")
+            log_handler.warning("[WARN] Google Calendar credentials not configured")
     
     def get_authorization_url(self, user_id: str) -> str:
         """
@@ -141,7 +142,7 @@ class CalendarService:
                 # Insert new
                 supabase.table("calendar_integrations").insert(data).execute()
                 
-            print(f"[OK] Stored calendar credentials for user {user_id}")
+            log_handler.info(f"[OK] Stored calendar credentials for user {user_id}")
             
         except Exception as e:
             raise Exception(f"Failed to store credentials: {str(e)}")
@@ -174,13 +175,13 @@ class CalendarService:
             )
             
             if not response.data:
-                print(f"[WARN] No calendar integration found for user {user_id}")
+                log_handler.warning(f"[WARN] No calendar integration found for user {user_id}")
                 return []
             
             credentials = response.data
             access_token = credentials["access_token"]
             
-            print(f"[OK] Found calendar integration for user {user_id}")
+            log_handler.info(f"[OK] Found calendar integration for user {user_id}")
             
             # Check if token is expired
             if credentials.get("token_expires_at"):
@@ -192,26 +193,26 @@ class CalendarService:
                 if expires_at.tzinfo is None:
                     expires_at = expires_at.replace(tzinfo=timezone.utc)
                 
-                print(f"[DEBUG] Token expires at: {expires_at}, Current time: {now}")
+                log_handler.debug(f"[DEBUG] Token expires at: {expires_at}, Current time: {now}")
                 
                 if now >= expires_at:
-                    print(f"[WARN] Token expired, refreshing...")
+                    log_handler.warning(f"[WARN] Token expired, refreshing...")
                     # Token expired, need to refresh
                     access_token = await self._refresh_access_token(
                         user_id,
                         credentials["refresh_token"]
                     )
                 else:
-                    print(f"[OK] Token still valid")
+                    log_handler.info(f"[OK] Token still valid")
             
             # Fetch calendar events
-            print(f"[INFO] Fetching calendar events: {days_behind} days behind to {days_ahead} days ahead...")
+            log_handler.info(f"[INFO] Fetching calendar events: {days_behind} days behind to {days_ahead} days ahead...")
             activities = await self._fetch_events(access_token, days_ahead, days_behind=days_behind)
-            print(f"[OK] Fetched {len(activities)} activities")
+            log_handler.info(f"[OK] Fetched {len(activities)} activities")
             return activities
             
         except Exception as e:
-            print(f"[ERROR] Failed to fetch calendar activities: {str(e)}")
+            log_handler.error(f"[ERROR] Failed to fetch calendar activities: {str(e)}")
             return []
     
     async def _refresh_access_token(
@@ -320,7 +321,7 @@ class CalendarService:
                     is_all_day=is_all_day
                 ))
             
-            print(f"[OK] Fetched {len(activities)} calendar activities")
+            log_handler.info(f"[OK] Fetched {len(activities)} calendar activities")
             return activities
             
         except requests.exceptions.RequestException as e:
@@ -339,7 +340,7 @@ class CalendarService:
                 "user_id", user_id
             ).eq("provider", "google").execute()
             
-            print(f"[OK] Revoked calendar access for user {user_id}")
+            log_handler.info(f"[OK] Revoked calendar access for user {user_id}")
             
         except Exception as e:
             raise Exception(f"Failed to revoke access: {str(e)}")

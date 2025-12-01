@@ -7,6 +7,7 @@ import json
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from configuration.config_loader import config
+from utils.custom_logger import log_handler
 
 load_dotenv()
 
@@ -79,22 +80,22 @@ class LLMService:
         # Try OpenAI first
         if self.openai_available:
             try:
-                print("[AI] Trying OpenAI (primary)...")
+                log_handler.info("[AI] Trying OpenAI (primary)...")
                 response = self._call_openai(prompt)
-                print("[OK] OpenAI generated song content")
+                log_handler.info("[OK] OpenAI generated song content")
                 return self._parse_and_validate_response(response)
             except Exception as e:
-                print(f"[WARN] OpenAI failed: {str(e)}")
+                log_handler.warning("OpenAI failed: {str(e)}")
         
         # Fallback to Gemini
         if self.gemini_available:
             try:
-                print("[AI] Trying Gemini (fallback)...")
+                log_handler.info("[AI] Trying Gemini (fallback)...")
                 response = self._call_gemini(prompt)
-                print("[OK] Gemini generated song content")
+                log_handler.info("[OK] Gemini generated song content")
                 return self._parse_and_validate_response(response)
             except Exception as e:
-                print(f"[ERROR] Gemini failed: {str(e)}")
+                log_handler.error("Gemini failed: {str(e)}")
                 raise Exception("All services failed")
         
         raise Exception("No service available")
@@ -294,16 +295,16 @@ IMPORTANT:
             verse_section = lyrics.split("[chorus]")[0]
             verse_lines = [line for line in verse_section.split("\n") if line.strip() and not line.strip().startswith("[")]
             if len(verse_lines) > 8:
-                print(f"[WARN] Warning: Verse has {len(verse_lines)} lines (max 8 recommended)")
+                log_handler.warning("Warning: Verse has {len(verse_lines)} lines (max 8 recommended)")
             
-            print(f"[OK] Validated song content:")
-            print(f"   Title: {data['title']}")
-            print(f"   Description: {data['description']}")
-            print(f"   Genre: {genre_tags}")
-            print(f"   Lyrics: {len(lyrics)} characters")
-            print(f"\n--- FULL LYRICS ---")
-            print(lyrics)
-            print(f"--- END LYRICS ---\n")
+            log_handler.info(f"[OK] Validated song content:")
+            log_handler.info(f"   Title: {data['title']}")
+            log_handler.info(f"   Description: {data['description']}")
+            log_handler.info(f"   Genre: {genre_tags}")
+            log_handler.info(f"   Lyrics: {len(lyrics)} characters")
+            log_handler.info(f"\n--- FULL LYRICS ---")
+            log_handler.info(lyrics)
+            log_handler.info(f"--- END LYRICS ---\n")
             
             return data
             

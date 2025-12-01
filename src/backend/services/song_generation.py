@@ -8,6 +8,7 @@ import time
 from typing import Dict, Any, Optional, Callable
 from dotenv import load_dotenv
 import runpod
+from utils.custom_logger import log_handler
 
 load_dotenv()
 
@@ -75,10 +76,10 @@ class SongGenerationService:
         if progress_callback:
             progress_callback("Sending request to RunPod...")
         
-        print("[MUSIC] Generating song with YuE...")
-        print(f"[WRITE] Genre: {genre_tags}")
-        print(f"[WRITE] Lyrics: {len(formatted_lyrics)} characters")
-        print("[WAIT] This may take 7-12 minutes...")
+        log_handler.info("[MUSIC] Generating song with YuE...")
+        log_handler.info(f"[WRITE] Genre: {genre_tags}")
+        log_handler.info(f"[WRITE] Lyrics: {len(formatted_lyrics)} characters")
+        log_handler.info("[WAIT] This may take 7-12 minutes...")
         
         start_time = time.time()
         
@@ -93,7 +94,7 @@ class SongGenerationService:
             )
             
             elapsed = time.time() - start_time
-            print(f"[TIME] Generation took {elapsed / 60:.1f} minutes")
+            log_handler.info(f"[TIME] Generation took {elapsed / 60:.1f} minutes")
             
             # Parse response
             if progress_callback:
@@ -108,7 +109,7 @@ class SongGenerationService:
             
         except Exception as e:
             error_msg = f"Song generation failed: {str(e)}"
-            print(f"[ERROR] {error_msg}")
+            log_handler.error("{error_msg}")
             if progress_callback:
                 progress_callback(f"Error: {error_msg}")
             raise Exception(error_msg)
@@ -183,9 +184,9 @@ class SongGenerationService:
         filename = output.get('filename', 'song.wav')
         file_size_mb = output.get('file_size_mb', len(audio_data) / 1024 / 1024)
         
-        print(f"[OK] Song generated successfully!")
-        print(f"[FILE] Filename: {filename}")
-        print(f"[DATA] Size: {file_size_mb:.2f} MB")
+        log_handler.info(f"[OK] Song generated successfully!")
+        log_handler.info(f"[FILE] Filename: {filename}")
+        log_handler.info(f"[DATA] Size: {file_size_mb:.2f} MB")
         
         return {
             "audio_data": audio_data,
@@ -205,7 +206,7 @@ class SongGenerationService:
         with open(output_path, 'wb') as f:
             f.write(audio_data)
         
-        print(f"[OK] Saved audio to {output_path}")
+        log_handler.info(f"[OK] Saved audio to {output_path}")
     
     def estimate_generation_time(self, is_first_run: bool = False) -> int:
         """

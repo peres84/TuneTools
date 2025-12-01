@@ -9,6 +9,7 @@ from uuid import UUID
 
 from db.supabase_client import supabase
 from models.album import Album, AlbumCreate
+from utils.custom_logger import log_handler
 from .image_generation import ImageGenerationService
 from .vinyl_disk import VinylDiskService
 
@@ -77,17 +78,17 @@ class AlbumService:
         week_start, week_end = self.get_week_boundaries(date)
         week_start_date = week_start.date()
         
-        print(f"📅 Week: {week_start_date} to {week_end.date()}")
+        log_handler.info(f"📅 Week: {week_start_date} to {week_end.date()}")
         
         # Check if album exists for this week
         existing_album = self._get_album_by_week(user_id, week_start_date)
         
         if existing_album:
-            print(f"[OK] Found existing album: {existing_album['name']}")
+            log_handler.info(f"[OK] Found existing album: {existing_album['name']}")
             return Album(**existing_album), False
         
         # Create new album
-        print("🆕 Creating new weekly album...")
+        log_handler.info("🆕 Creating new weekly album...")
         album, image_failed = self._create_new_album(
             user_id,
             week_start,
@@ -106,14 +107,15 @@ class AlbumService:
                 .select("*")
                 .eq("user_id", user_id)
                 .eq("week_start", week_start_date.isoformat())
-                .single()
+                .maybe_single()  # Returns None if no results, doesn't throw 406
                 .execute()
             )
             
             return response.data if response.data else None
             
         except Exception as e:
-            # No album found
+            # No album found or other error
+            log_handler.warning(f"[WARN] Error getting album by week: {str(e)}")
             return None
     
     def _create_new_album(
@@ -132,11 +134,11 @@ class AlbumService:
         
         # Use custom cover or generate artwork
         if custom_cover_data:
-            print("[IMAGE] Using custom cover image")
+            log_handler.info("[IMAGE] Using custom cover image")
             artwork_data = custom_cover_data
             image_failed = False
         else:
-            print("[IMAGE] Generating album artwork...")
+            log_handler.info("[IMAGE] Generating album artwork...")
             artwork_data, image_failed = self.image_service.generate_album_artwork(
                 week_start=week_start.date().isoformat(),
                 week_end=week_end.date().isoformat(),
@@ -145,7 +147,7 @@ class AlbumService:
             )
         
         # Transform to vinyl disk
-        print("[MUSIC] Creating vinyl disk...")
+        log_handler.info("[MUSIC] Creating vinyl disk...")
         vinyl_data = self.vinyl_service.create_vinyl_disk(artwork_data)
         
         # Upload vinyl disk to Supabase storage
@@ -175,7 +177,7 @@ class AlbumService:
         if not response.data:
             raise Exception("Failed to create album")
         
-        print(f"[OK] Created album: {album_name}")
+        log_handler.info(f"[OK] Created album: {album_name}")
         
         return Album(**response.data[0]), image_failed
     
@@ -199,7 +201,7 @@ class AlbumService:
         # Generate filename
         filename = f"{user_id}/{week_start}_vinyl.png"
         
-        print(f"📤 Uploading vinyl disk to storage: {filename}")
+        log_handler.info(f"📤 Uploading vinyl disk to storage: {filename}")
         
         try:
             # Try to upload, if file exists, remove it first and re-upload
@@ -212,7 +214,7 @@ class AlbumService:
             except Exception as upload_error:
                 # If file already exists (409 Duplicate), remove and retry
                 if "already exists" in str(upload_error).lower() or "409" in str(upload_error):
-                    print(f"[WARN] File exists, removing and re-uploading: {filename}")
+                    log_handler.warning(f"[WARN] File exists, removing and re-uploading: {filename}")
                     try:
                         supabase.storage.from_("vinyl_disks").remove([filename])
                     except:
@@ -230,7 +232,7 @@ class AlbumService:
             # Get public URL
             public_url = supabase.storage.from_("vinyl_disks").get_public_url(filename)
             
-            print(f"[OK] Vinyl disk uploaded: {public_url}")
+            log_handler.info(f"[OK] Vinyl disk uploaded: {public_url}")
             
             return public_url
             
@@ -352,7 +354,7 @@ class AlbumService:
             return album_data
             
         except Exception as e:
-            print(f"[ERROR] Failed to get album with songs: {str(e)}")
+            log_handler.error(f"[ERROR] Failed to get album with songs: {str(e)}")
             return None
     
     def list_user_albums(
@@ -386,5 +388,5 @@ class AlbumService:
             return [Album(**album) for album in response.data] if response.data else []
             
         except Exception as e:
-            print(f"[ERROR] Failed to list albums: {str(e)}")
+            log_handler.error(f"[ERROR] Failed to list albums: {str(e)}")
             return []

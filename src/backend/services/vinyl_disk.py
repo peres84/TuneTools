@@ -13,6 +13,7 @@ SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'scripts
 sys.path.insert(0, SCRIPTS_DIR)
 
 from create_vinyl_disk import create_vinyl_mask
+from utils.custom_logger import log_handler
 
 
 class VinylDiskService:
@@ -48,10 +49,10 @@ class VinylDiskService:
         
         # Validate hole ratio
         if not 0 < hole_ratio < 0.5:
-            print(f"[WARN] Invalid hole ratio {hole_ratio}, using default 0.14")
+            log_handler.warning("Invalid hole ratio {hole_ratio}, using default 0.14")
             hole_ratio = 0.14
         
-        print(f"[MUSIC] Creating vinyl disk (size: {disk_size}px, hole: {hole_ratio:.1%})")
+        log_handler.info(f"[MUSIC] Creating vinyl disk (size: {disk_size}px, hole: {hole_ratio:.1%})")
         
         # Load image
         img = Image.open(BytesIO(image_data))
@@ -87,7 +88,7 @@ class VinylDiskService:
         output_bytes = BytesIO()
         output.save(output_bytes, format='PNG')
         
-        print(f"[OK] Vinyl disk created ({disk_size}x{disk_size}px, {hole_ratio:.1%} hole)")
+        log_handler.info(f"[OK] Vinyl disk created ({disk_size}x{disk_size}px, {hole_ratio:.1%} hole)")
         
         return output_bytes.getvalue()
     
@@ -114,7 +115,7 @@ class VinylDiskService:
         with open(output_path, 'wb') as f:
             f.write(vinyl_data)
         
-        print(f"[OK] Saved vinyl disk to {output_path}")
+        log_handler.info(f"[OK] Saved vinyl disk to {output_path}")
     
     def create_from_file(
         self,

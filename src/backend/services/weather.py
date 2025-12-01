@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import time
 
 from models.context import WeatherData
+from utils.custom_logger import log_handler
 
 load_dotenv()
 
@@ -47,11 +48,11 @@ class WeatherService:
         if cache_key in self.cache:
             cached_data, cached_time = self.cache[cache_key]
             if time.time() - cached_time < self.cache_ttl:
-                print(f"[OK] Returning cached weather for {city_name}")
+                log_handler.info(f"[OK] Returning cached weather for {city_name}")
                 return cached_data
         
         # Fetch from API
-        print(f"[WEATHER]  Fetching weather for {city_name}")
+        log_handler.info(f"[WEATHER]  Fetching weather for {city_name}")
         
         url = f"https://api.openweathermap.org/data/2.5/weather"
         params = {
@@ -90,11 +91,11 @@ class WeatherService:
         if cache_key in self.cache:
             cached_data, cached_time = self.cache[cache_key]
             if time.time() - cached_time < self.cache_ttl:
-                print(f"[OK] Returning cached weather for {latitude},{longitude}")
+                log_handler.info(f"[OK] Returning cached weather for {latitude},{longitude}")
                 return cached_data
         
         # Fetch from API
-        print(f"[WEATHER]  Fetching weather for coordinates {latitude},{longitude}")
+        log_handler.info(f"[WEATHER]  Fetching weather for coordinates {latitude},{longitude}")
         
         url = f"https://api.openweathermap.org/data/2.5/weather"
         params = {
@@ -183,4 +184,4 @@ class WeatherService:
     def clear_cache(self):
         """Clear the weather cache"""
         self.cache.clear()
-        print("[DELETE] Weather cache cleared")
+        log_handler.info("[DELETE] Weather cache cleared")

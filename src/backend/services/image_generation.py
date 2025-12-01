@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from io import BytesIO
 from PIL import Image
 from configuration.config_loader import config
+from utils.custom_logger import log_handler
 
 load_dotenv()
 
@@ -73,25 +74,25 @@ class ImageGenerationService:
         # Try Gemini first (primary)
         if self.gemini_available:
             try:
-                print("[IMAGE] Trying Gemini Imagen (primary)...")
+                log_handler.info("[IMAGE] Trying Gemini Imagen (primary)...")
                 image_data = self._generate_with_gemini(prompt)
-                print("[OK] Gemini generated artwork")
+                log_handler.info("[OK] Gemini generated artwork")
                 return image_data, False
             except Exception as e:
-                print(f"[WARN] Gemini failed: {str(e)}")
+                log_handler.warning("Gemini failed: {str(e)}")
         
         # Fallback to OpenAI DALL-E
         if self.openai_available:
             try:
-                print("[IMAGE] Trying OpenAI DALL-E (fallback)...")
+                log_handler.info("[IMAGE] Trying OpenAI DALL-E (fallback)...")
                 image_data = self._generate_with_dalle(prompt)
-                print("[OK] DALL-E generated artwork")
+                log_handler.info("[OK] DALL-E generated artwork")
                 return image_data, False
             except Exception as e:
-                print(f"[ERROR] DALL-E failed: {str(e)}")
+                log_handler.error("DALL-E failed: {str(e)}")
         
         # Final fallback: Use default placeholder image
-        print("[WARN] All image services failed, using default placeholder")
+        log_handler.warning("All image services failed, using default placeholder")
         return self._generate_default_placeholder(), True
     
     def _build_artwork_prompt(
@@ -164,9 +165,9 @@ Visual elements:
         image_bytes = response.images[0]._image_bytes
         ```
         """
-        print("[WARN] Gemini image generation requires Vertex AI Imagen setup")
-        print("[INFO] Gemini text models (gemini-2.0-flash) cannot generate images")
-        print("[INFO] Falling back to DALL-E or default assets")
+        log_handler.warning("Gemini image generation requires Vertex AI Imagen setup")
+        log_handler.info("[INFO] Gemini text models (gemini-2.0-flash) cannot generate images")
+        log_handler.info("[INFO] Falling back to DALL-E or default assets")
         
         raise NotImplementedError(
             "Gemini Imagen API requires Vertex AI setup. "
@@ -208,7 +209,7 @@ Visual elements:
         with open(output_path, 'wb') as f:
             f.write(image_data)
         
-        print(f"[OK] Saved artwork to {output_path}")
+        log_handler.info(f"[OK] Saved artwork to {output_path}")
     
     def resize_to_square(self, image_data: bytes, size: int = 1000) -> bytes:
         """
@@ -265,11 +266,11 @@ Visual elements:
             with open(image_path, 'rb') as f:
                 image_data = f.read()
             
-            print(f"[OK] Using fallback asset: {selected_image}")
+            log_handler.info(f"[OK] Using fallback asset: {selected_image}")
             return image_data
             
         except Exception as e:
-            print(f"[ERROR] Failed to load fallback asset: {str(e)}")
+            log_handler.error("Failed to load fallback asset: {str(e)}")
             # Last resort: create a simple colored square
             img = Image.new('RGB', (1024, 1024), color=(138, 43, 226))
             output = BytesIO()
