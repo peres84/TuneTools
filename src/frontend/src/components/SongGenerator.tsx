@@ -17,14 +17,15 @@ interface Song {
 }
 
 interface SongGeneratorProps {
-  onGenerationComplete?: (song: Song) => void
+  onGenerationStart?: () => void
+  onGenerationComplete?: (song?: Song) => void
 }
 
 const MUSIC_GENRES = ['pop', 'rock', 'jazz', 'classical', 'electronic', 'indie', 'hiphop', 'country']
 const VOCAL_PREFERENCES = ['male', 'female', 'neutral']
 const MOOD_PREFERENCES = ['uplifting', 'calm', 'energetic', 'melancholic']
 
-export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
+export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongGeneratorProps) {
   const { session } = useAuth()
   const queryClient = useQueryClient()
   const [statusMessage, setStatusMessage] = useState<string>('')
@@ -71,6 +72,11 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
     mutationFn: async () => {
       if (!session?.access_token) {
         throw new Error('You must be logged in to generate a song')
+      }
+
+      // Notify parent that generation started
+      if (onGenerationStart) {
+        onGenerationStart()
       }
 
       setErrorMessage('')
@@ -163,6 +169,7 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       setRetryCount(0)
       // Invalidate and refetch today's song
       queryClient.invalidateQueries({ queryKey: ['todaySong'] })
+      // Notify parent that generation completed
       if (onGenerationComplete) {
         onGenerationComplete(song)
       }
@@ -173,6 +180,10 @@ export function SongGenerator({ onGenerationComplete }: SongGeneratorProps) {
       setErrorMessage(friendlyMessage)
       setStatusMessage('')
       setRetryCount(0)
+      // Notify parent that generation completed (with error)
+      if (onGenerationComplete) {
+        onGenerationComplete()
+      }
     }
   })
 

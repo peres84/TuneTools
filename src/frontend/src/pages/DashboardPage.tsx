@@ -9,6 +9,7 @@ export function DashboardPage() {
   const { user } = useAuth()
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lon: number; city: string } | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
 
   useEffect(() => {
     // Check if location is already set
@@ -64,8 +65,9 @@ export function DashboardPage() {
                 </span>
                 <button
                   onClick={handleChangeLocation}
-                  className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                  title="Change location"
+                  disabled={isGenerating}
+                  className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={isGenerating ? "Cannot change location while generating" : "Change location"}
                 >
                   <PencilIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 </button>
@@ -74,7 +76,10 @@ export function DashboardPage() {
           </div>
         </div>
         
-        <SongGenerator />
+        <SongGenerator 
+          onGenerationStart={() => setIsGenerating(true)}
+          onGenerationComplete={() => setIsGenerating(false)}
+        />
       </div>
 
       <LocationModal 
