@@ -37,6 +37,9 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
   const [volume, setVolume] = useState(0.7)
   const [isMuted, setIsMuted] = useState(false)
   const [showCopyNotification, setShowCopyNotification] = useState(false)
+  const [showDownloadModal, setShowDownloadModal] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
 
   const vinylDiskUrl = album?.vinyl_disk_url || song.vinyl_disk_url
 
@@ -96,15 +99,20 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const handleDownload = async () => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(`Download "${song.title}"?\n\nThis will download the song to your device.`)
-    
-    if (!confirmed) return
+  const handleDownloadClick = () => {
+    setShowDownloadModal(true)
+    setDownloadError(null)
+  }
+
+  const handleDownloadConfirm = async () => {
+    setIsDownloading(true)
+    setDownloadError(null)
     
     try {
       // Fetch the audio file as blob to force download
       const response = await fetch(song.audio_url)
+      if (!response.ok) throw new Error('Failed to fetch audio file')
+      
       const blob = await response.blob()
       
       // Create blob URL and trigger download
@@ -118,10 +126,22 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
       
       // Clean up blob URL
       window.URL.revokeObjectURL(blobUrl)
+      
+      // Close modal after successful download
+      setTimeout(() => {
+        setShowDownloadModal(false)
+        setIsDownloading(false)
+      }, 500)
     } catch (error) {
       console.error('Download failed:', error)
-      alert('Failed to download song. Please try again.')
+      setDownloadError('Failed to download song. Please try again.')
+      setIsDownloading(false)
     }
+  }
+
+  const handleDownloadCancel = () => {
+    setShowDownloadModal(false)
+    setDownloadError(null)
   }
 
   const handleShare = (platform: string) => {
@@ -158,7 +178,10 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
     }
   }
 
-  const genreTags = song.genre_tags.split(',').map(tag => tag.trim())
+  const genreTags = song.genre_tags
+    .split(/[\s,]+/)
+    .filter(tag => tag.trim())
+    .map(tag => tag.charAt(0).toUpperCase() + tag.slice(1).toLowerCase())
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -174,28 +197,67 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
         </div>
       )}
 
-      {/* Animated gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#ee7752] via-[#e73c7e] via-[#23a6d5] via-[#23d5ab] to-[#ee7752] bg-[length:400%_400%] animate-waterGradient" />
+      {/* Download confirmation modal */}
+      {showDownloadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scaleIn">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                Download Song
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Download "<span className="font-semibold">{song.title}</span>"?
+              </p>
+            </div>
+
+            {downloadError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400 text-center">
+                  {downloadError}
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleDownloadCancel}
+                disabled={isDownloading}
+                className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDownloadConfirm}
+                disabled={isDownloading}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-lg font-semibold hover:from-brand-primary/90 hover:to-brand-secondary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isDownloading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Downloading...
+                  </>
+                ) : (
+                  'Download'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Simplified gradient background - much better performance */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#ee7752] via-[#e73c7e] to-[#23a6d5]" />
       
-      {/* Wave overlay layer 1 */}
-      <div className="absolute inset-0 opacity-30 animate-wave1" style={{
-        background: `
-          radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.2) 0%, transparent 50%),
-          radial-gradient(circle at 80% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
-          linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)
-        `,
-        backgroundSize: '200% 200%, 200% 200%, 300% 100%'
-      }} />
-      
-      {/* Wave overlay layer 2 */}
-      <div className="absolute inset-0 opacity-30 animate-wave2" style={{
-        background: `
-          radial-gradient(circle at 60% 30%, rgba(35, 166, 213, 0.3) 0%, transparent 40%),
-          radial-gradient(circle at 40% 70%, rgba(238, 119, 82, 0.3) 0%, transparent 40%),
-          linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.1), transparent)
-        `,
-        backgroundSize: '250% 250%, 250% 250%, 100% 300%'
-      }} />
+      {/* Subtle overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
 
       {/* Player container */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
@@ -309,7 +371,7 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
             {!isSharedView && (
               <div className="mb-6 text-center">
                 <button
-                  onClick={handleDownload}
+                  onClick={handleDownloadClick}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-primary to-brand-secondary hover:from-brand-primary/90 hover:to-brand-secondary/90 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 font-semibold"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

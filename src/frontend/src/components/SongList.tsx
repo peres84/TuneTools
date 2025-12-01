@@ -164,18 +164,18 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
               </div>
 
               {/* Genre Tags */}
-              <div className="flex flex-wrap gap-1 mb-3">
-                {song.genre_tags.split(' ').slice(0, 3).map((tag, index) => (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {song.genre_tags.split(/[\s,]+/).filter(tag => tag.trim()).slice(0, 3).map((tag, index) => (
                   <span
                     key={index}
-                    className="px-2 py-0.5 bg-brand-primary/20 text-brand-primary dark:text-brand-secondary rounded text-xs font-medium"
+                    className="px-2 py-1 bg-brand-primary/20 text-brand-primary dark:text-brand-secondary rounded-full text-xs font-medium"
                   >
-                    {tag}
+                    {tag.trim()}
                   </span>
                 ))}
-                {song.genre_tags.split(' ').length > 3 && (
-                  <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs">
-                    +{song.genre_tags.split(' ').length - 3}
+                {song.genre_tags.split(/[\s,]+/).filter(tag => tag.trim()).length > 3 && (
+                  <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full text-xs font-medium">
+                    +{song.genre_tags.split(/[\s,]+/).filter(tag => tag.trim()).length - 3}
                   </span>
                 )}
               </div>
