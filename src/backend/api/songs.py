@@ -238,7 +238,7 @@ async def _aggregate_context_data(
             supabase.table("user_preferences")
             .select("*")
             .eq("user_id", user_id)
-            .single()
+            .maybe_single()
             .execute()
         )
         
@@ -504,33 +504,56 @@ async def get_song(
     user_id: str = Depends(get_current_user)
 ):
     """
-    Get specific song by ID
+    Get specific song by ID with album information
     
     Args:
         song_id: Song ID
         user_id: Authenticated user ID
         
     Returns:
-        Song
+        dict: { song: Song, album: Album }
     """
     try:
-        response = (
+        # Fetch song
+        song_response = (
             supabase.table("songs")
             .select("*")
             .eq("id", song_id)
             .eq("user_id", user_id)
-            .single()
+            .maybe_single()
             .execute()
         )
         
-        if not response.data:
+        if not song_response.data:
             raise HTTPException(status_code=404, detail="Song not found")
         
-        return Song(**response.data)
+        song = Song(**song_response.data)
+        
+        # Fetch album if song has album_id
+        album = None
+        if song.album_id:
+            try:
+                album_response = (
+                    supabase.table("albums")
+                    .select("*")
+                    .eq("id", str(song.album_id))
+                    .maybe_single()
+                    .execute()
+                )
+                if album_response.data:
+                    album = album_response.data
+            except Exception as e:
+                log_handler.warning(f"Failed to fetch album for song {song_id}: {str(e)}")
+        
+        return {
+            "song": song,
+            "album": album
+        }
         
     except HTTPException:
         raise
     except Exception as e:
+        log_handler.error(f"Failed to get song {song_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get song: {str(e)}"
