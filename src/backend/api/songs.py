@@ -353,6 +353,21 @@ async def _create_song_record(
         Song: Created song with share token
     """
     try:
+        # Convert Pydantic models to JSON-serializable dicts
+        import json
+        from datetime import datetime
+        
+        def serialize_datetime(obj):
+            """Convert datetime objects to ISO format strings"""
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+        
+        # Serialize context data to ensure datetime objects are converted
+        weather_data_json = json.loads(json.dumps(song_data.weather_data, default=serialize_datetime)) if song_data.weather_data else None
+        news_data_json = json.loads(json.dumps(song_data.news_data, default=serialize_datetime)) if song_data.news_data else None
+        calendar_data_json = json.loads(json.dumps(song_data.calendar_data, default=serialize_datetime)) if song_data.calendar_data else None
+        
         # Prepare data for insertion
         insert_data = {
             "user_id": user_id,
@@ -362,9 +377,9 @@ async def _create_song_record(
             "lyrics": song_data.lyrics,
             "genre_tags": song_data.genre_tags,
             "audio_url": song_data.audio_url,
-            "weather_data": song_data.weather_data,
-            "news_data": song_data.news_data,
-            "calendar_data": song_data.calendar_data,
+            "weather_data": weather_data_json,
+            "news_data": news_data_json,
+            "calendar_data": calendar_data_json,
             "generation_time_seconds": song_data.generation_time_seconds,
             "llm_provider": song_data.llm_provider
         }
