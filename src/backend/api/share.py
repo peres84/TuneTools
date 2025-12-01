@@ -47,7 +47,7 @@ async def get_shared_song(request: Request, share_token: str):
             supabase.table("songs")
             .select("*, albums(*)")
             .eq("share_token", share_token)
-            .single()
+            .maybe_single()
             .execute()
         )
         
@@ -60,6 +60,20 @@ async def get_shared_song(request: Request, share_token: str):
         song_data = song_response.data
         album_data = song_data.pop("albums", None)
         
+        # Generate signed URL for audio (valid for 1 hour)
+        audio_url = song_data.get("audio_url")
+        if audio_url and not audio_url.startswith('http'):
+            try:
+                signed_url = supabase.storage.from_("audio_files").create_signed_url(
+                    audio_url,
+                    3600  # 1 hour expiry
+                )
+                if signed_url and 'signedURL' in signed_url:
+                    audio_url = signed_url['signedURL']
+                    log_handler.info(f"Generated signed URL for shared song {share_token}")
+            except Exception as e:
+                log_handler.error(f"Failed to generate signed URL for shared song {share_token}: {str(e)}")
+        
         # Build response with song and album data
         response = {
             "song": {
@@ -68,7 +82,7 @@ async def get_shared_song(request: Request, share_token: str):
                 "description": song_data.get("description"),
                 "lyrics": song_data.get("lyrics"),
                 "genre_tags": song_data.get("genre_tags"),
-                "audio_url": song_data.get("audio_url"),
+                "audio_url": audio_url,
                 "share_token": song_data.get("share_token"),
                 "created_at": song_data.get("created_at"),
                 "weather_data": song_data.get("weather_data"),

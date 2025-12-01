@@ -329,12 +329,12 @@ async def _store_audio_file(
             file_options={"content-type": "audio/wav"}
         )
         
-        # Get public URL
-        public_url = supabase.storage.from_("audio_files").get_public_url(storage_filename)
-        
+        # Store the storage path (not a URL) for security
+        # We'll generate signed URLs when needed
         log_handler.info(f"[OK] Audio uploaded: {storage_filename}")
         
-        return public_url
+        # Return the storage path (will be converted to signed URL when retrieved)
+        return storage_filename
         
     except Exception as e:
         raise Exception(f"Failed to store audio file: {str(e)}")
@@ -440,7 +440,22 @@ async def list_songs(
             .execute()
         )
         
-        return {"songs": response.data or [], "total": len(response.data or [])}
+        songs = response.data or []
+        
+        # Generate signed URLs for all songs
+        for song in songs:
+            if song.get('audio_url') and not song['audio_url'].startswith('http'):
+                try:
+                    signed_url = supabase.storage.from_("audio_files").create_signed_url(
+                        song['audio_url'],
+                        3600  # 1 hour expiry
+                    )
+                    if signed_url and 'signedURL' in signed_url:
+                        song['audio_url'] = signed_url['signedURL']
+                except Exception as e:
+                    log_handler.warning(f"Failed to generate signed URL for song {song.get('id')}: {str(e)}")
+        
+        return {"songs": songs, "total": len(songs)}
         
     except Exception as e:
         log_handler.error(f"Failed to list songs: {str(e)}")
@@ -528,6 +543,31 @@ async def get_song(
             raise HTTPException(status_code=404, detail="Song not found")
         
         song = Song(**song_response.data)
+        
+        # Generate signed URL for audio (valid for 1 hour)
+        if song.audio_url:
+            # Extract storage path from URL if it's a full URL
+            storage_path = song.audio_url
+            if storage_path.startswith('http'):
+                # Extract path from URL: .../audio_files/user-id/filename.mp3
+                if '/audio_files/' in storage_path:
+                    storage_path = storage_path.split('/audio_files/')[1].split('?')[0]
+                else:
+                    log_handler.warning(f"Could not extract storage path from URL: {storage_path}")
+            
+            # Generate signed URL
+            try:
+                signed_url = supabase.storage.from_("audio_files").create_signed_url(
+                    storage_path,
+                    3600  # 1 hour expiry
+                )
+                if signed_url and 'signedURL' in signed_url:
+                    song.audio_url = signed_url['signedURL']
+                    log_handler.info(f"Generated signed URL for song {song_id}")
+                else:
+                    log_handler.error(f"Signed URL response missing signedURL key: {signed_url}")
+            except Exception as e:
+                log_handler.error(f"Failed to generate signed URL for song {song_id}: {str(e)}")
         
         # Fetch album if song has album_id
         album = None

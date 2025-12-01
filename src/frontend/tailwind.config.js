@@ -20,11 +20,21 @@ export default {
       animation: {
         'spin-slow': 'spin 3s linear infinite',
         'wave': 'wave 8s ease-in-out infinite',
+        'slideInRight': 'slideInRight 0.3s ease-out',
+        'fadeOut': 'fadeOut 0.3s ease-out',
       },
       keyframes: {
         wave: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-20px)' },
+        },
+        slideInRight: {
+          '0%': { transform: 'translateX(100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        fadeOut: {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
         },
       },
     },

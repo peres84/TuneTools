@@ -20,9 +20,10 @@ interface Song {
 interface SongListProps {
   songs: Song[]
   albumName?: string
+  onSongClick?: (songId: string) => void
 }
 
-export function SongList({ songs, albumName }: SongListProps) {
+export function SongList({ songs, albumName, onSongClick }: SongListProps) {
   const navigate = useNavigate()
   const { session } = useAuth()
   const queryClient = useQueryClient()
@@ -30,7 +31,11 @@ export function SongList({ songs, albumName }: SongListProps) {
   const [deletingSong, setDeletingSong] = useState<Song | null>(null)
 
   const handleSongClick = (songId: string) => {
-    navigate(`/song/${songId}`)
+    if (onSongClick) {
+      onSongClick(songId)
+    } else {
+      navigate(`/song/${songId}`)
+    }
   }
 
   // Update song mutation

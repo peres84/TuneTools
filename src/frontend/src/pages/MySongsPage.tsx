@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { SongList } from '../components/SongList'
 import { AlbumCollection } from '../components/AlbumCollection'
+import { SongPlayer } from '../components/SongPlayer'
 import { ArrowPathIcon } from '@heroicons/react/24/outline'
 import { SongSkeleton } from '../components/LoadingSkeletons'
 import { cacheManager, CACHE_KEYS } from '../utils/cacheManager'
@@ -12,6 +13,7 @@ export function MySongsPage() {
   const { session } = useAuth()
   const queryClient = useQueryClient()
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null)
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Fetch all songs with caching
@@ -80,10 +82,17 @@ export function MySongsPage() {
 
   const handleAlbumClick = (albumId: string) => {
     setSelectedAlbumId(albumId)
+    setSelectedSongId(null) // Clear song selection when viewing album
+  }
+
+  const handleSongClick = (songId: string) => {
+    setSelectedSongId(songId)
+    setSelectedAlbumId(null) // Clear album selection when viewing song
   }
 
   const handleBackToOverview = () => {
     setSelectedAlbumId(null)
+    setSelectedSongId(null)
   }
 
   const handleRefresh = async () => {
@@ -101,6 +110,61 @@ export function MySongsPage() {
     ])
     
     setTimeout(() => setIsRefreshing(false), 500)
+  }
+
+  // Fetch single song data if selected
+  const { data: songData, isLoading: songLoading } = useQuery({
+    queryKey: ['song', selectedSongId],
+    queryFn: async () => {
+      if (!session?.access_token || !selectedSongId) return null
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/songs/${selectedSongId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        }
+      )
+
+      if (!response.ok) return null
+      return response.json()
+    },
+    enabled: !!session?.access_token && !!selectedSongId,
+    staleTime: Infinity,
+    gcTime: 30 * 60 * 1000,
+  })
+
+  // If a song is selected, show the song player
+  if (selectedSongId) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-6xl mx-auto">
+          <button
+            onClick={handleBackToOverview}
+            className="mb-6 flex items-center gap-2 text-brand-primary hover:text-brand-primary/80 transition-colors font-medium"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to My Music
+          </button>
+
+          {songLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-brand-primary mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading song...</p>
+            </div>
+          ) : songData ? (
+            <SongPlayer song={songData.song} album={songData.album} />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-red-600 dark:text-red-400">Failed to load song</p>
+            </div>
+          )}
+        </div>
+      </DashboardLayout>
+    )
   }
 
   // If an album is selected, show only that album's songs
@@ -128,6 +192,7 @@ export function MySongsPage() {
             <SongList
               songs={albumWithSongs?.songs || []}
               albumName={albumWithSongs?.name}
+              onSongClick={handleSongClick}
             />
           )}
         </div>
@@ -185,7 +250,7 @@ export function MySongsPage() {
               ))}
             </div>
           ) : (
-            <SongList songs={songsData?.songs || []} />
+            <SongList songs={songsData?.songs || []} onSongClick={handleSongClick} />
           )}
         </div>
       </div>
