@@ -7,14 +7,17 @@ import jwt
 import os
 from dotenv import load_dotenv
 
+# Load .env if it exists (local development)
+# In production, environment variables come from the platform
 load_dotenv()
 
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 if not SUPABASE_JWT_SECRET:
     raise EnvironmentError(
-        "Missing SUPABASE_JWT_SECRET. "
-        "Get it from Supabase Dashboard > Settings > API > JWT Secret"
+        "Missing SUPABASE_JWT_SECRET environment variable. "
+        "Add it to Railway Dashboard > Variables tab. "
+        "Get the value from Supabase Dashboard > Settings > API > JWT Secret"
     )
 
 

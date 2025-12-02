@@ -6,9 +6,14 @@ from pathlib import Path
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-# Load .env from project root (two levels up from this file)
+# Load .env from project root if it exists (for local development)
+# In production (Railway/Docker), environment variables are provided by the platform
 env_path = Path(__file__).parent.parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    # Try loading from current directory or parent directories
+    load_dotenv()
 
 # Supabase configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL")

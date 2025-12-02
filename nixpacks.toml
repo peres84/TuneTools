@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["python310"]
+
+[phases.install]
+cmds = ["pip install -r src/backend/requirements.txt"]
+
+[phases.build]
+cmds = ["mkdir -p logs"]
+
+[start]
+cmd = "cd src/backend && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"
