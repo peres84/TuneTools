@@ -2,6 +2,18 @@
 
 This guide will help you deploy the TuneTools FastAPI backend to Railway.
 
+## 🚨 Common Issue: "Could not determine how to build the app"
+
+**If you see this error**, it means Railway is looking at the wrong directory!
+
+**Quick Fix:**
+1. Go to Railway Dashboard → Your Service → **Settings**
+2. Find **"Root Directory"** setting
+3. Set it to: `src/backend`
+4. Save and redeploy
+
+See Step 2 below for detailed instructions.
+
 ## Prerequisites
 
 - Railway account (sign up at https://railway.app)
@@ -30,10 +42,20 @@ This guide will help you deploy the TuneTools FastAPI backend to Railway.
 3. Select **"Deploy from GitHub repo"**
 4. Authorize Railway to access your GitHub account
 5. Select your **TuneTools** repository
-6. **Important:** Set the root directory to `src/backend` in Railway settings
-   - Go to **Settings** → **Service Settings**
-   - Set **Root Directory** to `src/backend`
-7. Railway will automatically detect the Dockerfile
+
+### ⚠️ CRITICAL: Set Root Directory
+
+**This is the most important step!** Railway needs to know your app is in `src/backend/`:
+
+1. After selecting your repo, Railway will create the service
+2. **Immediately** go to **Settings** tab
+3. Scroll to **"Service Settings"** or **"Source"** section
+4. Find **"Root Directory"** field
+5. Set it to: `src/backend`
+6. Click **"Save"** or **"Update"**
+7. Railway will now detect your Dockerfile and Python app correctly
+
+**Without this step, Railway will fail with "could not determine how to build the app"**
 
 ## Step 3: Configure Environment Variables
 
