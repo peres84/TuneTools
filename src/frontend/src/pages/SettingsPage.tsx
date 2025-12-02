@@ -465,6 +465,8 @@ function CalendarIntegration() {
       return response.json()
     },
     enabled: !!session?.access_token,
+    staleTime: 0, // Always refetch when component mounts
+    refetchOnMount: 'always', // Force refetch on mount
   })
 
   // Connect calendar mutation

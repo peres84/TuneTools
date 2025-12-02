@@ -14,29 +14,8 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const queryClient = useQueryClient()
 
-  // Check URL params for OAuth callback status
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const calendarStatus = params.get('calendar')
-    const errorMessage = params.get('message')
-
-    if (calendarStatus === 'success') {
-      setStatusMessage({ type: 'success', message: 'Google Calendar connected successfully!' })
-      setIsConnecting(true)
-      // Clean up URL
-      window.history.replaceState({}, '', '/onboarding')
-      // Refetch status
-      queryClient.invalidateQueries({ queryKey: ['calendarStatus'] })
-    } else if (calendarStatus === 'error') {
-      setStatusMessage({ type: 'error', message: errorMessage || 'Failed to connect calendar' })
-      setIsConnecting(false)
-      // Clean up URL
-      window.history.replaceState({}, '', '/onboarding')
-    }
-  }, [queryClient])
-
   // Fetch calendar connection status
-  const { data: calendarStatus } = useQuery({
+  const { data: calendarStatus, refetch } = useQuery({
     queryKey: ['calendarStatus'],
     queryFn: async () => {
       if (!session?.access_token) return null
@@ -54,8 +33,32 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
       return response.json()
     },
     enabled: !!session?.access_token,
+    staleTime: 0, // Always consider data stale
     retry: false,
   })
+
+  // Check URL params for OAuth callback status
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const calendarStatusParam = params.get('calendar')
+    const errorMessage = params.get('message')
+
+    if (calendarStatusParam === 'success') {
+      setStatusMessage({ type: 'success', message: 'Google Calendar connected successfully!' })
+      setIsConnecting(true)
+      // Clean up URL
+      window.history.replaceState({}, '', '/onboarding')
+      // Invalidate and refetch calendar status
+      queryClient.invalidateQueries({ queryKey: ['calendarStatus'] })
+      // Force immediate refetch
+      refetch()
+    } else if (calendarStatusParam === 'error') {
+      setStatusMessage({ type: 'error', message: errorMessage || 'Failed to connect calendar' })
+      setIsConnecting(false)
+      // Clean up URL
+      window.history.replaceState({}, '', '/onboarding')
+    }
+  }, [queryClient, refetch])
 
   const connectMutation = useMutation({
     mutationFn: async () => {
