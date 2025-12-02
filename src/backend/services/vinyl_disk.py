@@ -1,19 +1,52 @@
 """
 Vinyl Disk Service
-Wraps the create_vinyl_disk.py script for album artwork transformation
+Transforms album artwork into vinyl disk images with center hole
 """
-import os
-import sys
 from typing import Optional
-from PIL import Image
+from PIL import Image, ImageDraw
 from io import BytesIO
 
-# Add scripts directory to path
-SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'scripts')
-sys.path.insert(0, SCRIPTS_DIR)
-
-from create_vinyl_disk import create_vinyl_mask
 from utils.custom_logger import log_handler
+
+
+def create_vinyl_mask(size, hole_ratio=0.14):
+    """
+    Create a circular mask with a center hole (like a vinyl record).
+
+    Args:
+        size: Tuple of (width, height) for the mask
+        hole_ratio: Ratio of the hole diameter to the outer diameter (default: 0.14 for vinyl)
+
+    Returns:
+        PIL Image object with the mask (grayscale)
+    """
+    mask = Image.new('L', size, 0)
+    draw = ImageDraw.Draw(mask)
+
+    # Calculate dimensions
+    width, height = size
+    min_dim = min(width, height)
+
+    # Outer circle (full disk)
+    outer_radius = min_dim // 2
+    center_x, center_y = width // 2, height // 2
+
+    # Draw outer circle (white)
+    draw.ellipse(
+        [center_x - outer_radius, center_y - outer_radius,
+         center_x + outer_radius, center_y + outer_radius],
+        fill=255
+    )
+
+    # Inner hole (black - transparent)
+    inner_radius = int(outer_radius * hole_ratio)
+    draw.ellipse(
+        [center_x - inner_radius, center_y - inner_radius,
+         center_x + inner_radius, center_y + inner_radius],
+        fill=0
+    )
+
+    return mask
 
 
 class VinylDiskService:
