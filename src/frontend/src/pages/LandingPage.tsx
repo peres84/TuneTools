@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useState } from 'react'
 import logoDisk from '../assets/logo-disk.png'
 
 export function LandingPage() {

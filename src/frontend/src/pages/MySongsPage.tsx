@@ -80,7 +80,6 @@ export function MySongsPage() {
 
   const handleAlbumClick = (albumId: string) => {
     setSelectedAlbumId(albumId)
-    setSelectedSongId(null) // Clear song selection when viewing album
   }
 
   const handleSongClick = (songId: string) => {
@@ -90,7 +89,6 @@ export function MySongsPage() {
 
   const handleBackToOverview = () => {
     setSelectedAlbumId(null)
-    setSelectedSongId(null)
   }
 
   const handleRefresh = async () => {
