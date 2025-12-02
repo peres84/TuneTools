@@ -109,21 +109,45 @@ class LLMService:
         custom_title: Optional[str] = None
     ) -> str:
         """Build prompt for LLM following YuE guidelines with optional custom title"""
+        from datetime import datetime, timezone
         
         title_instruction = f'Use this exact title: "{custom_title}"' if custom_title else "Generate a creative, catchy title"
         
         # Format context
         weather_summary = f"{weather_data.get('weather_condition', 'clear')}, {weather_data.get('temp_c', 20)}°C"
         
+        # Filter calendar activities to only TODAY's events
+        today = datetime.now(timezone.utc).date()
+        today_activities = []
+        
+        for activity in calendar_activities:
+            # Parse start_time (could be string or datetime)
+            start_time = activity.get('start_time')
+            if isinstance(start_time, str):
+                try:
+                    start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                except:
+                    continue
+            
+            if start_time and start_time.date() == today:
+                today_activities.append(activity)
+        
+        log_handler.info(f"[FILTER] Filtered {len(calendar_activities)} activities to {len(today_activities)} today's activities")
+        
+        # Adjust news count based on calendar activities
+        # If no activities today, show more news (up to 5 articles)
+        # If activities exist, show fewer news (3 articles)
+        news_count = 5 if not today_activities else 3
+        
         news_summary = "\n".join([
             f"- {article.get('title', '')}"
-            for article in news_articles[:3]
+            for article in news_articles[:news_count]
         ])
         
         calendar_summary = "\n".join([
-            f"- {activity.get('title', '')}"
-            for activity in calendar_activities[:3]
-        ]) if calendar_activities else "No scheduled activities"
+            f"- {activity.get('title', '')} at {activity.get('start_time', 'TBD')}"
+            for activity in today_activities[:5]  # Max 5 activities
+        ]) if today_activities else "No scheduled activities for today"
         
         # Get user preferences
         preferred_genres = user_preferences.get('music_genres', ['pop', 'indie'])
@@ -173,27 +197,30 @@ BAD Examples:
 - "death metal screaming chaos" (not YuE-friendly)
 
 LYRICS REQUIREMENTS (CRITICAL):
-- Structure: [verse] section, then [chorus] section
-- Verse: 6-8 lines maximum (NOT more)
-- Chorus: 4-6 lines maximum (NOT more)
-- Each section = ~30 seconds when sung (DON'T exceed this)
+- Structure: ONE [verse] section, then ONE [chorus] section (TOTAL: 2 sections only)
+- Verse: 6-8 lines (~30 seconds when sung)
+- Chorus: 4-6 lines (~30 seconds when sung)
+- Total song length: ~60 seconds (verse + chorus)
 - Separate sections with DOUBLE newline (\\n\\n)
-- Tell a story: weather → news → user's day → motivation
+- Tell a complete story in just these 2 sections: weather → news → calendar/activities → motivation
 - Keep language simple, singable, and conversational
 - Make it personal and relevant to TODAY
+- DO NOT add extra verses or choruses
 
 CORRECT Format:
 [verse]
-Line 1 of verse
-Line 2 of verse
-Line 3 of verse
-Line 4 of verse
+Line 1: Brief weather mention (one line only)
+Line 2: News headline 1
+Line 3: News headline 2
+Line 4: Calendar activity or personal day
+Line 5: Calendar activity or personal day
+Line 6: Transition to chorus theme
 
 [chorus]
-Line 1 of chorus
-Line 2 of chorus
-Line 3 of chorus
-Line 4 of chorus
+Line 1: Main message/hook
+Line 2: Main message/hook
+Line 3: Motivational line
+Line 4: Closing hook
 
 IMPORTANT:
 - Return ONLY valid JSON, no markdown, no code blocks
@@ -280,10 +307,20 @@ IMPORTANT:
             
             # Validate lyrics structure
             lyrics = data["lyrics"]
-            if "[verse]" not in lyrics.lower():
+            lyrics_lower = lyrics.lower()
+            
+            # Count sections
+            verse_count = lyrics_lower.count("[verse]")
+            chorus_count = lyrics_lower.count("[chorus]")
+            
+            if verse_count < 1:
                 raise ValueError("Lyrics missing [verse] section")
-            if "[chorus]" not in lyrics.lower():
+            if chorus_count < 1:
                 raise ValueError("Lyrics missing [chorus] section")
+            
+            # Warn if too many sections (should be exactly 1 verse + 1 chorus = ~60s)
+            if verse_count > 1 or chorus_count > 1:
+                log_handler.warning(f"[WARN] Song has {verse_count} verse(s) and {chorus_count} chorus(es). Expected: 1 verse + 1 chorus for ~60s song")
             
             # Validate genre tags (at least 3 components)
             genre_tags = data["genre_tags"].strip()

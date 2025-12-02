@@ -37,20 +37,16 @@ export function SongPlayerPage() {
         return
       }
 
-      if (!session?.access_token) {
-        setError('You must be logged in to view this song')
-        setLoading(false)
-        return
-      }
-
       try {
+        // Try with authentication first if available
+        const headers: HeadersInit = {}
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`
+        }
+
         const response = await fetch(
           `${import.meta.env.VITE_API_BASE_URL}/api/songs/${songId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`
-            }
-          }
+          { headers }
         )
 
         if (!response.ok) {

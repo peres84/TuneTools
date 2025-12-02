@@ -18,6 +18,7 @@ export function OptionsMenu({ items }: OptionsMenuProps) {
   const handleToggle = (e: React.MouseEvent) => {
     console.log('🔘 [OptionsMenu] Button clicked, current isOpen:', isOpen)
     e.stopPropagation()
+    e.preventDefault()
     setIsOpen(!isOpen)
   }
 
@@ -27,12 +28,18 @@ export function OptionsMenu({ items }: OptionsMenuProps) {
   }
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    handleClose()
+    console.log('🎯 [OptionsMenu] Backdrop clicked, target:', e.target, 'currentTarget:', e.currentTarget)
+    if (e.target === e.currentTarget) {
+      e.stopPropagation()
+      e.preventDefault()
+      handleClose()
+    }
   }
 
   const handleMenuClick = (e: React.MouseEvent) => {
+    console.log('📦 [OptionsMenu] Menu content clicked')
     e.stopPropagation()
+    e.preventDefault()
   }
 
   console.log('🎨 [OptionsMenu] Rendering, isOpen:', isOpen, 'items count:', items.length)
@@ -61,9 +68,11 @@ export function OptionsMenu({ items }: OptionsMenuProps) {
               {items.map((item, index) => (
                 <button
                   key={index}
+                  type="button"
                   onClick={(e) => {
                     console.log('🎯 [OptionsMenu] Menu item clicked:', item.label)
                     e.stopPropagation()
+                    e.preventDefault()
                     item.onClick()
                     setIsOpen(false)
                   }}
@@ -79,7 +88,13 @@ export function OptionsMenu({ items }: OptionsMenuProps) {
               ))}
             </div>
             <button
-              onClick={handleClose}
+              type="button"
+              onClick={(e) => {
+                console.log('🚫 [OptionsMenu] Cancel button clicked')
+                e.stopPropagation()
+                e.preventDefault()
+                handleClose()
+              }}
               className="mt-4 w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
               Cancel

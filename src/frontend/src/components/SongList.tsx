@@ -30,7 +30,10 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
   const [editingSong, setEditingSong] = useState<Song | null>(null)
   const [deletingSong, setDeletingSong] = useState<Song | null>(null)
 
+  console.log('🎵 [SongList] Render - editingSong:', editingSong?.id, 'deletingSong:', deletingSong?.id)
+
   const handleSongClick = (songId: string) => {
+    console.log('🎯 [SongList] Song clicked:', songId)
     if (onSongClick) {
       onSongClick(songId)
     } else {
@@ -56,6 +59,7 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
       return response.json()
     },
     onSuccess: () => {
+      setEditingSong(null) // Close modal on success
       queryClient.invalidateQueries({ queryKey: ['allSongs'] })
       queryClient.invalidateQueries({ queryKey: ['album'] })
     }
@@ -64,6 +68,7 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
   // Delete song mutation
   const deleteSongMutation = useMutation({
     mutationFn: async (songId: string) => {
+      console.log('🗑️ [SongList] Deleting song:', songId)
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/songs/${songId}`,
         {
@@ -73,13 +78,30 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
           }
         }
       )
-      if (!response.ok) throw new Error('Failed to delete song')
-      return response.json()
+      if (!response.ok) {
+        console.error('❌ [SongList] Delete failed:', response.status, response.statusText)
+        throw new Error('Failed to delete song')
+      }
+      const result = await response.json()
+      console.log('✅ [SongList] Delete successful:', result)
+      return result
     },
     onSuccess: () => {
+      console.log('🎉 [SongList] Delete mutation success, closing modal')
+      setDeletingSong(null) // Close modal on success
+      
+      // Clear cache to ensure UI updates
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('cache_songs_list')
+        localStorage.removeItem('cache_albums_list')
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['allSongs'] })
       queryClient.invalidateQueries({ queryKey: ['album'] })
       queryClient.invalidateQueries({ queryKey: ['albums'] })
+    },
+    onError: (error) => {
+      console.error('💥 [SongList] Delete mutation error:', error)
     }
   })
 
@@ -127,8 +149,11 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
         {songs.map((song) => (
           <div
             key={song.id}
-            onClick={() => handleSongClick(song.id)}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group active:scale-95 touch-manipulation"
+            onClick={(e) => {
+              console.log('🎵 [SongList] Song card clicked:', song.id, 'target:', e.target)
+              handleSongClick(song.id)
+            }}
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group active:scale-95 touch-manipulation relative"
           >
             {/* Song Card Header */}
             <div className="bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 dark:from-brand-primary/20 dark:to-brand-secondary/20 p-6 group-hover:from-brand-primary/20 group-hover:to-brand-secondary/20 transition-all">
@@ -143,18 +168,30 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   <MusicalNoteIcon className="w-8 h-8 text-brand-primary group-hover:scale-110 transition-transform" />
-                  <div onClick={(e) => e.stopPropagation()}>
+                  <div 
+                    onClick={(e) => {
+                      console.log('🛑 [SongList] OptionsMenu wrapper clicked, stopping propagation')
+                      e.stopPropagation()
+                    }}
+                    className="relative z-10"
+                  >
                     <OptionsMenu
                       items={[
                         {
                           label: 'Rename Song',
                           icon: <PencilIcon className="w-5 h-5" />,
-                          onClick: () => setEditingSong(song)
+                          onClick: () => {
+                            console.log('✏️ [SongList] Rename clicked for song:', song.id)
+                            setEditingSong(song)
+                          }
                         },
                         {
                           label: 'Delete Song',
                           icon: <TrashIcon className="w-5 h-5" />,
-                          onClick: () => setDeletingSong(song),
+                          onClick: () => {
+                            console.log('🗑️ [SongList] Delete clicked for song:', song.id)
+                            setDeletingSong(song)
+                          },
                           variant: 'danger'
                         }
                       ]}
@@ -233,6 +270,7 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
         message={`Are you sure you want to delete "${deletingSong?.title}"? This action cannot be undone.`}
         confirmText="Delete Song"
         confirmVariant="danger"
+        isLoading={deleteSongMutation.isPending}
       />
     </div>
   )

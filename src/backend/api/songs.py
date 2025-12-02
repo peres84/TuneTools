@@ -573,26 +573,23 @@ async def get_today_song(request: Request, user_id: str = Depends(get_current_us
 )
 async def get_song(
     request: Request,
-    song_id: str,
-    user_id: str = Depends(get_current_user)
+    song_id: str
 ):
     """
-    Get specific song by ID with album information
+    Get specific song by ID with album information (PUBLIC - no auth required for sharing)
     
     Args:
         song_id: Song ID
-        user_id: Authenticated user ID
         
     Returns:
         dict: { song: Song, album: Album }
     """
     try:
-        # Fetch song
+        # Fetch song (no user_id filter - public access)
         song_response = (
             supabase.table("songs")
             .select("*")
             .eq("id", song_id)
-            .eq("user_id", user_id)
             .maybe_single()
             .execute()
         )
@@ -656,3 +653,4 @@ async def get_song(
             status_code=500,
             detail=f"Failed to get song: {str(e)}"
         )
+

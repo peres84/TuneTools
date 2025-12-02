@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MusicalNoteIcon, SparklesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getUserFriendlyErrorMessage, ERROR_MESSAGES, logError } from '../utils/errorMessages'
+import { getUserFriendlyErrorMessage, logError } from '../utils/errorMessages'
 import { withRetry } from '../utils/retryMechanism'
 
 interface Song {
@@ -34,11 +34,37 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
   const [customTitle, setCustomTitle] = useState<string>('')
   const [customCover, setCustomCover] = useState<File | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [isGeneratingPersistent, setIsGeneratingPersistent] = useState(false)
   
   // Preference overrides (temporary, only for this generation)
   const [overrideGenres, setOverrideGenres] = useState<string[]>([])
   const [overrideVocal, setOverrideVocal] = useState<string>('')
   const [overrideMood, setOverrideMood] = useState<string>('')
+  
+  // Check for ongoing generation on mount
+  useState(() => {
+    const generationState = localStorage.getItem('song_generation_state')
+    if (generationState) {
+      try {
+        const state = JSON.parse(generationState)
+        const now = Date.now()
+        // If generation started less than 15 minutes ago, consider it still ongoing
+        if (now - state.startTime < 15 * 60 * 1000) {
+          setIsGeneratingPersistent(true)
+          setStatusMessage(state.statusMessage || 'Generating your song...')
+          if (onGenerationStart) {
+            onGenerationStart()
+          }
+        } else {
+          // Clear stale state
+          localStorage.removeItem('song_generation_state')
+        }
+      } catch (e) {
+        console.error('Failed to parse generation state')
+        localStorage.removeItem('song_generation_state')
+      }
+    }
+  })
 
   // Query to fetch today's songs and limit info (cached)
   const { data: todayData, isLoading: checkingToday } = useQuery({
@@ -57,6 +83,27 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
 
       if (response.ok) {
         const data = await response.json()
+        
+        // Check if generation completed while we were away
+        const generationState = localStorage.getItem('song_generation_state')
+        if (generationState && data.songs && data.songs.length > 0) {
+          try {
+            const state = JSON.parse(generationState)
+            const latestSong = data.songs[0]
+            // If there's a new song created after generation started, clear the state
+            if (new Date(latestSong.created_at).getTime() > state.startTime) {
+              localStorage.removeItem('song_generation_state')
+              setIsGeneratingPersistent(false)
+              setStatusMessage('Your song is ready!')
+              if (onGenerationComplete) {
+                onGenerationComplete(latestSong)
+              }
+            }
+          } catch (e) {
+            console.error('Failed to check generation completion')
+          }
+        }
+        
         return data
       }
       return null
@@ -64,7 +111,8 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
     enabled: !!session?.access_token,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchOnMount: true,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    refetchInterval: isGeneratingPersistent ? 10000 : false, // Poll every 10s while generating
   })
 
   const todaySongs = todayData?.songs || []
@@ -87,7 +135,15 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
       }
 
       setErrorMessage('')
-      setStatusMessage('Gathering your daily context (news, weather, calendar)...')
+      const initialStatus = 'Gathering your daily context (news, weather, calendar)...'
+      setStatusMessage(initialStatus)
+      setIsGeneratingPersistent(true)
+      
+      // Save generation state to localStorage
+      localStorage.setItem('song_generation_state', JSON.stringify({
+        startTime: Date.now(),
+        statusMessage: initialStatus
+      }))
       
       // Use retry mechanism for the API call
       return await withRetry(
@@ -180,6 +236,9 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
       setStatusMessage('Your song is ready!')
       setErrorMessage('')
       setRetryCount(0)
+      setIsGeneratingPersistent(false)
+      // Clear generation state from localStorage
+      localStorage.removeItem('song_generation_state')
       // Invalidate and refetch today's songs data
       queryClient.invalidateQueries({ queryKey: ['todaySong'] })
       queryClient.invalidateQueries({ queryKey: ['allSongs'] })
@@ -194,6 +253,9 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
       setErrorMessage(friendlyMessage)
       setStatusMessage('')
       setRetryCount(0)
+      setIsGeneratingPersistent(false)
+      // Clear generation state from localStorage
+      localStorage.removeItem('song_generation_state')
       // Notify parent that generation completed (with error)
       if (onGenerationComplete) {
         onGenerationComplete()
@@ -466,7 +528,7 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
       )}
 
       {/* Loading State with Progress */}
-      {generateMutation.isPending && statusMessage && (
+      {(generateMutation.isPending || isGeneratingPersistent) && statusMessage && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500 rounded-lg p-6">
           <div className="flex items-center gap-4">
             <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -478,7 +540,7 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
                 {statusMessage}
               </p>
               <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                This may take a few minutes...
+                This may take a few minutes... {isGeneratingPersistent && !generateMutation.isPending && '(Checking for completion...)'}
               </p>
             </div>
           </div>

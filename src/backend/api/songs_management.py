@@ -110,6 +110,7 @@ async def delete_song(
             raise HTTPException(status_code=404, detail="Song not found or unauthorized")
         
         song_data = song_response.data
+        audio_url = song_data.get('audio_url')
         
         # Delete song from database (RLS ensures user owns the song)
         # Trigger will automatically update album song_count
@@ -121,11 +122,23 @@ async def delete_song(
             .execute()
         )
         
-        # TODO: Delete audio file from storage
-        # audio_url = song_data['audio_url']
-        # Extract filename and delete from audio_files bucket
+        log_handler.info(f"[DELETE] Song {song_id} deleted from database by user {user_id}")
         
-        log_handler.info(f"[DELETE] Song {song_id} deleted by user {user_id}")
+        # Delete audio file from storage
+        if audio_url:
+            try:
+                # Extract storage path from URL if it's a full URL
+                storage_path = audio_url
+                if storage_path.startswith('http'):
+                    if '/audio_files/' in storage_path:
+                        storage_path = storage_path.split('/audio_files/')[1].split('?')[0]
+                
+                # Delete from storage
+                supabase.storage.from_("audio_files").remove([storage_path])
+                log_handler.info(f"[DELETE] Audio file deleted: {storage_path}")
+            except Exception as e:
+                # Log error but don't fail the request since DB record is already deleted
+                log_handler.warning(f"[DELETE] Failed to delete audio file {audio_url}: {str(e)}")
         
         return {"message": "Song deleted successfully", "song_id": song_id}
         

@@ -78,7 +78,7 @@ class AlbumService:
         week_start, week_end = self.get_week_boundaries(date)
         week_start_date = week_start.date()
         
-        log_handler.info(f"📅 Week: {week_start_date} to {week_end.date()}")
+        log_handler.info(f"[WEEK] Week: {week_start_date} to {week_end.date()}")
         
         # Check if album exists for this week
         existing_album = self._get_album_by_week(user_id, week_start_date)
@@ -88,7 +88,7 @@ class AlbumService:
             return Album(**existing_album), False
         
         # Create new album
-        log_handler.info("🆕 Creating new weekly album...")
+        log_handler.info("[NEW] Creating new weekly album...")
         album, image_failed = self._create_new_album(
             user_id,
             week_start,
@@ -201,7 +201,7 @@ class AlbumService:
         # Generate filename
         filename = f"{user_id}/{week_start}_vinyl.png"
         
-        log_handler.info(f"📤 Uploading vinyl disk to storage: {filename}")
+        log_handler.info(f"[UPLOAD] Uploading vinyl disk to storage: {filename}")
         
         try:
             # Try to upload, if file exists, remove it first and re-upload
