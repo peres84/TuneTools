@@ -136,7 +136,28 @@ Token validation is handled by `utils/auth.py`
 
 ## Deployment
 
-### Docker
+### Railway (Recommended)
+
+**Quick Start:** [RAILWAY_QUICK_START.md](./RAILWAY_QUICK_START.md)
+
+**Deployment Options:**
+- **Automatic (GitHub):** [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md)
+- **Manual (CLI):** [RAILWAY_MANUAL_DEPLOYMENT.md](./RAILWAY_MANUAL_DEPLOYMENT.md)
+- **Checklist:** [RAILWAY_SETUP_CHECKLIST.md](./RAILWAY_SETUP_CHECKLIST.md)
+
+**Key Steps:**
+1. Set **Root Directory** to `src/backend` ⚠️ CRITICAL
+2. Add environment variables
+3. Deploy (automatic from GitHub or manual via CLI)
+
+### Render (Alternative)
+
+See deployment guides:
+- **Quick Start:** `docs/deployment-render-setup.md`
+- **Complete Guide:** `docs/deployment-checklist.md`
+- **Render Details:** `RENDER-DEPLOYMENT.md`
+
+### Docker (Local Development)
 
 Use Docker Compose for local containerized development:
 
@@ -150,19 +171,6 @@ docker-compose logs -f
 # Stop services
 docker-compose down
 ```
-
-### Render (Production)
-
-See deployment guides:
-- **Quick Start:** `docs/deployment-render-setup.md`
-- **Complete Guide:** `docs/deployment-checklist.md`
-- **Render Details:** `RENDER-DEPLOYMENT.md`
-
-**Key Steps:**
-1. Connect GitHub repository to Render
-2. Set **Root Directory** to `src/backend`
-3. Add environment variables
-4. Deploy
 
 ## Scripts
 
