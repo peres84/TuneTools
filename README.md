@@ -1,6 +1,14 @@
-# TuneTools
+<div align="center">
+  <img src="docs/images/logo-disk.png" alt="TuneTools Logo" width="200"/>
+  
+  # TuneTools
+  
+  **Compose personalized songs from your daily context**
+  
+  Transform news, weather, and calendar events into unique musical experiences
+</div>
 
-TuneTools composes short, personalized songs from real-world context: news, weather, calendar events, and user preferences.
+---
 
 TuneTools is a prototype pipeline that:
 
@@ -87,51 +95,122 @@ Note: First run will download models (large) when the handler is called.
 - The handler located at `tests/runpod_severless_ep/handler.py` lazily downloads models to `/runpod-volume` (if available) or `/tmp/models` and then runs `infer.py` inside `/app/YuE/inference`.
 - The handler encodes audio to Base64 and returns it in the response. See the example client in `test_endpoint.py` for usage.
 
-# TuneTools
+## How Songs Are Generated with YuE on RunPod
 
-**Project**: TuneTools — generate short personalized songs from news, weather, calendar events, and user preferences.
+TuneTools uses the **YuE (Music Generation)** model running on **RunPod serverless infrastructure** to generate songs. Here's the complete pipeline:
 
-**Overview**
+### Architecture Overview
 
-- **Purpose**: Convert daily context into short, shareable songs.
-- **Inputs**: News headlines, weather, Google Calendar events, user preferences.
-- **Core components**: LLM-based spec & lyrics generator, YuE inference pipeline glue, serverless RunPod handler, optional Gemini artwork.
+```
+User Request → Backend API → RunPod Serverless → YuE Model → Generated Audio
+```
 
-**Repository Layout**
+### YuE Model Pipeline
 
-- **`README.md`**: Project overview and instructions.
-- **`docs/`**: Integration notes (calendar API, prompts, models).
-- **`scripts/generate_image.py`**: Template to generate cover artwork via Gemini (image-generation placeholder).
-- **`tests/runpod_severless_ep/handler.py`**: RunPod serverless handler that downloads models and runs YuE.
-- **`tests/runpod_severless_ep/test_endpoint.py`**: Example client for the RunPod endpoint.
-- **`tests/news_test.py`**: Small helper for news-related tests.
+YuE is a multi-stage music generation model that requires three components:
 
-**Quick Start (developer)**
+1. **Stage 1: YuE-s1-7B-anneal-en-cot** (~12GB)
+   - Generates initial music representation from genre tags and lyrics
+   - Chain-of-Thought reasoning for music composition
 
-- **Create venv**: `python -m venv .venv`
-- **Activate (PowerShell)**: `.\.venv\Scripts\Activate.ps1`
-- **Install deps**: `pip install -r requirements.txt` (add `requirements.txt` for reproducibility)
-- **Run example client** (set env vars first): `python tests/runpod_severless_ep/test_endpoint.py`
+2. **Stage 2: YuE-s2-1B-general** (~4GB)
+   - Converts representation to audio tokens
+   - Handles melody and harmony generation
 
-Notes: the first generation run will download large YuE models if they are not cached.
+3. **Upsampler: YuE-upsampler** (~2.5GB)
+   - Enhances audio quality
+   - Increases sample rate for better fidelity
 
-**How it works (high level)**
+**Total Model Size:** ~18.5 GB
 
-1. Gather context (weather, calendar, news).
-2. Use an LLM to produce a 5-component genre tag and structured lyrics (verse/chorus).
-3. Save `genre.txt` and `lyrics.txt` and run the YuE inference pipeline to synthesize audio.
-4. The handler encodes audio as Base64 and returns it in the response.
+### Model Download Process
 
-**RunPod Handler**
+On first run, the RunPod handler automatically downloads all required models:
 
-- **Location**: `tests/runpod_severless_ep/handler.py`.
-- **Behavior**: Lazily downloads models to `/runpod-volume` or `/tmp/models`, runs `infer.py` under `/app/YuE/inference`, and returns Base64-encoded audio.
-- **Client example**: `tests/runpod_severless_ep/test_endpoint.py` demonstrates calling the handler and saving the result locally.
+<div align="center">
+  <img src="docs/images/downloading_models.png" alt="YuE Models Downloading" width="600"/>
+  <p><em>Models are downloaded once and cached for subsequent runs</em></p>
+</div>
 
-**Image Generation (Gemini)**
+**Download Strategy:**
+- **Persistent Storage:** Models are saved to `/runpod-volume` if a network volume is mounted
+- **Ephemeral Storage:** Falls back to `/tmp/models` for single-worker instances
+- **Lazy Loading:** Models download only on first request, not at container startup
+- **Caching:** Subsequent requests reuse cached models (7-minute generation vs 12-minute first run)
 
-- **Script**: `scripts/generate_image.py` (template).
-- **Env**: set `GEMINI_API_KEY` or `GOOGLE_API_KEY` before running.
+### Generation Parameters
+
+The handler calls YuE with optimized parameters:
+
+```python
+python infer.py \
+  --stage1_model /path/to/YuE-s1-7B-anneal-en-cot \
+  --stage2_model /path/to/YuE-s2-1B-general \
+  --max_new_tokens 4000 \          # Increased for 60-second songs
+  --run_n_segments 2 \              # Number of generation segments
+  --repetition_penalty 1.1 \        # Prevents repetitive patterns
+  --genre_txt /tmp/genre.txt \      # 5-component genre tags
+  --lyrics_txt /tmp/lyrics.txt \    # Structured lyrics (verse + chorus)
+  --output_dir /tmp/output
+```
+
+### Performance Metrics
+
+| Metric | First Run (Cold Start) | Subsequent Runs (Warm) |
+|--------|----------------------|----------------------|
+| Model Download | ~10 minutes | 0 seconds (cached) |
+| Audio Generation | ~7 minutes | ~7 minutes |
+| **Total Time** | **~12 minutes** | **~7 minutes** |
+| **Cost (RTX 4090)** | ~$0.23 | ~$0.09 |
+
+### RunPod Configuration
+
+**Recommended Setup:**
+- **GPU:** RTX 4090 or equivalent
+- **Container Disk:** 40GB minimum (for model downloads)
+- **Network Volume:** Optional but recommended for persistent caching
+- **Execution Timeout:** 900 seconds (15 minutes)
+- **Idle Timeout:** 90 seconds (keeps workers warm)
+- **Region:** EU-RO-1 or closest to your users
+
+### Input Format
+
+**Genre Tags** (5 components, space-separated):
+```
+calm female jazz piano smooth vocal acoustic
+```
+
+**Lyrics** (structured with sections):
+```
+[verse]
+Scattered clouds drift in the sky so gray
+Laid off from Meta, still searching today
+Logitech shines, on the Best in Business list
+Meeting with Elisa, time to persist
+
+[chorus]
+Keep pushing forward, don't lose your stride
+Keep pushing forward, with hope as your guide
+New opportunities, just over the hill
+Keep pushing forward, your dreams to fulfill
+```
+
+### Output
+
+- **Format:** MP3 audio file
+- **Duration:** ~60 seconds (verse + chorus)
+- **Quality:** 44.1kHz sample rate after upsampling
+- **Size:** ~0.4-0.5 MB
+- **Encoding:** Base64 for API transport
+
+For more details on YuE models and parameters, see `docs/Yue_Models.md` and `docs/valid_arguments_YuE.md`.
+
+## Image Generation (Gemini)
+
+TuneTools can generate custom album artwork using Google's Gemini AI:
+
+- **Script**: `scripts/generate_image.py` (template)
+- **Environment**: Set `GEMINI_API_KEY` or `GOOGLE_API_KEY` before running
 - **Example (PowerShell)**:
 
 ```powershell
@@ -140,7 +219,7 @@ setx GEMINI_API_KEY "your_api_key_here"
 python scripts\generate_image.py --title "Morning Anthem" --genre "uplifting female indie-pop bright vocal" --lyrics_file sample_lyrics.txt --out cover.png
 ```
 
-- **Notes**: `generate_image.py` contains a `NotImplementedError` placeholder for the actual Gemini call. Replace `generate_image_from_gemini` with your preferred Gemini SDK/REST call and credentials.
+**Note**: The script contains a placeholder for the actual Gemini call. Replace `generate_image_from_gemini` with your preferred Gemini SDK/REST implementation.
 
 **Kiroween / Hackathon Submission (Frankenstein category)**
 
