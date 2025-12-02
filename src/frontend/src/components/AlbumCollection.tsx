@@ -115,6 +115,10 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
       return response.json()
     },
     onSuccess: () => {
+      // Clear cache to ensure UI updates
+      cacheManager.remove(CACHE_KEYS.ALBUMS_LIST)
+      cacheManager.remove(CACHE_KEYS.SONGS_LIST)
+      
       queryClient.invalidateQueries({ queryKey: ['albums'] })
       queryClient.invalidateQueries({ queryKey: ['allSongs'] })
     }
@@ -289,7 +293,8 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
                       {
                         label: 'Rename Album',
                         icon: <PencilIcon className="w-5 h-5" />,
-                        onClick: () => setEditingAlbum(album)
+                        onClick: () => {}, // Disabled - no action
+                        disabled: true
                       },
                       {
                         label: 'Change Cover',

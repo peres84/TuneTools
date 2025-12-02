@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { EllipsisVerticalIcon } from '@heroicons/react/24/outline'
 
-interface MenuItem {
+export interface MenuItem {
   label: string
   icon?: React.ReactNode
   onClick: () => void
   variant?: 'default' | 'danger'
+  disabled?: boolean
 }
 
 interface OptionsMenuProps {
@@ -69,15 +70,20 @@ export function OptionsMenu({ items }: OptionsMenuProps) {
                 <button
                   key={index}
                   type="button"
+                  disabled={item.disabled}
                   onClick={(e) => {
                     console.log('🎯 [OptionsMenu] Menu item clicked:', item.label)
                     e.stopPropagation()
                     e.preventDefault()
-                    item.onClick()
-                    setIsOpen(false)
+                    if (!item.disabled) {
+                      item.onClick()
+                      setIsOpen(false)
+                    }
                   }}
                   className={`w-full px-4 py-3 text-left flex items-center gap-3 rounded-lg transition-colors ${
-                    item.variant === 'danger'
+                    item.disabled
+                      ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                      : item.variant === 'danger'
                       ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}

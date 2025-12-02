@@ -6,6 +6,7 @@ import { MusicalNoteIcon, ClockIcon, CalendarIcon, PencilIcon, TrashIcon } from 
 import { OptionsMenu } from './OptionsMenu'
 import { EditModal } from './EditModal'
 import { ConfirmModal } from './ConfirmModal'
+import { cacheManager, CACHE_KEYS } from '../utils/cacheManager'
 
 interface Song {
   id: string
@@ -91,10 +92,8 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
       setDeletingSong(null) // Close modal on success
       
       // Clear cache to ensure UI updates
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('cache_songs_list')
-        localStorage.removeItem('cache_albums_list')
-      }
+      cacheManager.remove(CACHE_KEYS.SONGS_LIST)
+      cacheManager.remove(CACHE_KEYS.ALBUMS_LIST)
       
       queryClient.invalidateQueries({ queryKey: ['allSongs'] })
       queryClient.invalidateQueries({ queryKey: ['album'] })
