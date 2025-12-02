@@ -87,7 +87,8 @@ origins = [
     "http://localhost:5173",  # Vite dev server
     "http://localhost:8000",
     "http://localhost:8080",
-    os.getenv("FRONTEND_URL", "https://tune-tools.vercel.app/"),  # Production frontend URL (e.g., https://tunetools.vercel.app)
+    os.getenv("FRONTEND_URL", ""),  # Production frontend URL from Railway env var
+    "https://tune-tools.vercel.app",  # Production frontend (no trailing slash)
 ]
 
 # Remove empty strings from origins
