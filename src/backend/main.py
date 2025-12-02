@@ -85,8 +85,9 @@ app.add_exception_handler(Exception, general_exception_handler)
 origins = [
     "http://localhost:3000",  # React dev server
     "http://localhost:5173",  # Vite dev server
+    "http://localhost:8000",
     "http://localhost:8080",
-    os.getenv("FRONTEND_URL", ""),  # Production frontend URL (e.g., https://tunetools.vercel.app)
+    os.getenv("FRONTEND_URL", "https://tune-tools.vercel.app/"),  # Production frontend URL (e.g., https://tunetools.vercel.app)
 ]
 
 # Remove empty strings from origins
