@@ -1,41 +1,47 @@
-# Railway-optimized Dockerfile for TuneTools Backend New
+# Railway-optimized Dockerfile for TuneTools Backend
+# IMPORTANT: This file must be located at the ROOT of your repository.
+
 FROM python:3.10-slim
 
-# Set working directory
+# Set working directory inside container
 WORKDIR /app
 
-# Environment variables
+# Prevent Python from writing pyc files & enable cleaner logs
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies
+# Install essential system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker caching
-COPY requirements.txt .
+# Copy backend requirements (located in src/backend)
+COPY src/backend/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
-COPY . .
+# Copy all backend project files
+COPY src/backend/ .
 
-# Create logs directory
+# Ensure logs directory exists
 RUN mkdir -p logs
 
-# Railway provides PORT environment variable dynamically
-# Expose port for documentation (Railway ignores this)
+# Expose port (Railway will still override with $PORT)
 EXPOSE 8000
 
-# Health check (Railway uses healthcheckPath in railway.json instead)
+# Optional healthcheck (Railway also has healthcheckPath)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Run the application with Uvicorn
-# Railway injects $PORT automatically
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --proxy-headers --forwarded-allow-ips='*'
+# Run FastAPI with Uvicorn
+# Railway injects environment variable $PORT automatically
+CMD uvicorn main:app \
+    --host 0.0.0.0 \
+    --port ${PORT:-8000} \
+    --workers 1 \
+    --proxy-headers \
+    --forwarded-allow-ips='*'
