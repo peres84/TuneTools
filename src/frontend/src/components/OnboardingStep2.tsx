@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../contexts/AuthContext'
 
 interface OnboardingStep2Props {
   onComplete: (calendarEnabled: boolean) => void
@@ -7,19 +8,64 @@ interface OnboardingStep2Props {
 }
 
 export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
+  const { session } = useAuth()
   const [isConnecting, setIsConnecting] = useState(false)
   const [showWarning, setShowWarning] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const queryClient = useQueryClient()
+
+  // Check URL params for OAuth callback status
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const calendarStatus = params.get('calendar')
+    const errorMessage = params.get('message')
+
+    if (calendarStatus === 'success') {
+      setStatusMessage({ type: 'success', message: 'Google Calendar connected successfully!' })
+      setIsConnecting(true)
+      // Clean up URL
+      window.history.replaceState({}, '', '/onboarding')
+      // Refetch status
+      queryClient.invalidateQueries({ queryKey: ['calendarStatus'] })
+    } else if (calendarStatus === 'error') {
+      setStatusMessage({ type: 'error', message: errorMessage || 'Failed to connect calendar' })
+      setIsConnecting(false)
+      // Clean up URL
+      window.history.replaceState({}, '', '/onboarding')
+    }
+  }, [queryClient])
+
+  // Fetch calendar connection status
+  const { data: calendarStatus } = useQuery({
+    queryKey: ['calendarStatus'],
+    queryFn: async () => {
+      if (!session?.access_token) return null
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/status`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        }
+      )
+
+      if (!response.ok) return null
+      return response.json()
+    },
+    enabled: !!session?.access_token,
+    retry: false,
+  })
 
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const token = localStorage.getItem('supabase.auth.token')
-      if (!token) throw new Error('Not authenticated')
+      if (!session?.access_token) throw new Error('Not authenticated')
 
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/calendar/authorize`,
         {
           headers: {
-            'Authorization': `Bearer ${JSON.parse(token).access_token}`
+            'Authorization': `Bearer ${session.access_token}`
           }
         }
       )
@@ -40,6 +86,10 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
       )
       
       setIsConnecting(true)
+    },
+    onError: (err: Error) => {
+      console.error('Calendar connection error:', err)
+      setStatusMessage({ type: 'error', message: err.message || 'Failed to connect calendar' })
     }
   })
 
@@ -69,6 +119,33 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
           Let us know about your daily activities to create more personalized songs
         </p>
       </div>
+
+      {statusMessage && (
+        <div className={`mb-6 p-4 rounded-lg border-2 ${
+          statusMessage.type === 'success'
+            ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
+            : 'bg-red-50 dark:bg-red-900/20 border-red-500'
+        }`}>
+          <div className="flex items-center gap-3">
+            {statusMessage.type === 'success' ? (
+              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            <p className={`font-medium ${
+              statusMessage.type === 'success'
+                ? 'text-green-800 dark:text-green-200'
+                : 'text-red-800 dark:text-red-200'
+            }`}>
+              {statusMessage.message}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-6">
         <div className="text-center mb-6">
@@ -111,7 +188,23 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
           </div>
         </div>
 
-        {!isConnecting ? (
+        {calendarStatus?.connected ? (
+          <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-500 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="font-medium text-green-800 dark:text-green-200">
+                  Connected to Google Calendar
+                </p>
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  Your calendar is ready to use!
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : !isConnecting ? (
           <button
             onClick={handleGoogleCalendar}
             disabled={connectMutation.isPending}
@@ -186,7 +279,7 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
           ← Back
         </button>
         <div className="flex gap-3">
-          {!showWarning && (
+          {!showWarning && !calendarStatus?.connected && (
             <button
               onClick={handleSkip}
               className="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -194,7 +287,7 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
               Skip for now
             </button>
           )}
-          {isConnecting && (
+          {(isConnecting || calendarStatus?.connected) && (
             <button
               onClick={handleContinue}
               className="px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 active:scale-95 transition-all font-semibold"
