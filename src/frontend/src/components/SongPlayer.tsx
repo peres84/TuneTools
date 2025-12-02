@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   PlayIcon,
   PauseIcon,
   SpeakerWaveIcon,
-  SpeakerXMarkIcon
+  SpeakerXMarkIcon,
+  ArrowLeftIcon
 } from '@heroicons/react/24/solid'
 
 interface Song {
@@ -30,6 +32,7 @@ interface SongPlayerProps {
 }
 
 export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProps) {
+  const navigate = useNavigate()
   const audioRef = useRef<HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -145,8 +148,12 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
   }
 
   const handleShare = (platform: string) => {
-    const shareUrl = window.location.href
+    // Construct the proper song URL
+    const baseUrl = window.location.origin
+    const shareUrl = `${baseUrl}/song/${song.id}`
     const shareText = `Check out this song: ${song.title} - ${song.description}`
+    
+    console.log('🔗 [SongPlayer] Sharing URL:', shareUrl)
 
     switch (platform) {
       case 'twitter':
@@ -262,6 +269,17 @@ export function SongPlayer({ song, album, isSharedView = false }: SongPlayerProp
       {/* Player container */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
         <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-12 max-w-2xl w-full mx-4">
+          
+          {/* Back button - only show if not shared view */}
+          {!isSharedView && (
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-brand-primary dark:hover:text-brand-secondary transition-colors mb-4 group"
+            >
+              <ArrowLeftIcon className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              <span className="font-medium">Back</span>
+            </button>
+          )}
           
           {/* Vinyl disk */}
           <div className="flex justify-center mb-6 md:mb-8">

@@ -97,9 +97,16 @@ async def get_calendar_status(
         }
         
     except Exception as e:
+        error_str = str(e)
+        # Check if it's a JWT expiration error from Supabase
+        if "JWT expired" in error_str or "PGRST303" in error_str:
+            raise HTTPException(
+                status_code=401,
+                detail="Session expired. Please refresh your session."
+            )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to check calendar status: {str(e)}"
+            detail=f"Failed to check calendar status: {error_str}"
         )
 
 

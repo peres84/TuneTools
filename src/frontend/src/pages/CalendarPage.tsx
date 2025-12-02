@@ -42,13 +42,9 @@ export function CalendarPage() {
       }
 
       // Check calendar connection status
-      const statusResponse = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/status`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        }
+      const { fetchWithAuth } = await import('../utils/apiClient')
+      const statusResponse = await fetchWithAuth(
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/status`
       )
 
       if (!statusResponse.ok) {
@@ -68,13 +64,8 @@ export function CalendarPage() {
 
       // Fetch 3 months of calendar activities (previous + current + next month)
       // This gives us the exact date range for all days in these 3 months
-      const activitiesResponse = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/activities?months=3`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        }
+      const activitiesResponse = await fetchWithAuth(
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/activities?months=3`
       )
 
       if (!activitiesResponse.ok) {

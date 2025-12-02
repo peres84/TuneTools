@@ -75,13 +75,9 @@ export function SettingsPage() {
       }
 
       // Fetch from API if not cached
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/user/preferences`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        }
+      const { fetchWithAuth } = await import('../utils/apiClient')
+      const response = await fetchWithAuth(
+        `${import.meta.env.VITE_API_BASE_URL}/api/user/preferences`
       )
 
       if (!response.ok) throw new Error('Failed to fetch preferences')
@@ -117,13 +113,13 @@ export function SettingsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(
+      const { fetchWithAuth } = await import('../utils/apiClient')
+      const response = await fetchWithAuth(
         `${import.meta.env.VITE_API_BASE_URL}/api/user/preferences`,
         {
           method: 'PUT',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             categories,
@@ -142,13 +138,9 @@ export function SettingsPage() {
     },
     onSuccess: async () => {
       // Refetch preferences from API to get the latest saved data
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/user/preferences`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`
-          }
-        }
+      const { fetchWithAuth } = await import('../utils/apiClient')
+      const response = await fetchWithAuth(
+        `${import.meta.env.VITE_API_BASE_URL}/api/user/preferences`
       )
       
       if (response.ok) {
@@ -452,13 +444,9 @@ function CalendarIntegration() {
     queryFn: async () => {
       if (!session?.access_token) return null
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/status`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        }
+      const { fetchWithAuth } = await import('../utils/apiClient')
+      const response = await fetchWithAuth(
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/status`
       )
 
       if (!response.ok) throw new Error('Failed to fetch calendar status')
@@ -472,13 +460,9 @@ function CalendarIntegration() {
   // Connect calendar mutation
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/authorize`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`
-          }
-        }
+      const { fetchWithAuth } = await import('../utils/apiClient')
+      const response = await fetchWithAuth(
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/authorize`
       )
 
       if (!response.ok) throw new Error('Failed to get authorization URL')
@@ -504,13 +488,11 @@ function CalendarIntegration() {
   // Disconnect calendar mutation
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(
+      const { fetchWithAuth } = await import('../utils/apiClient')
+      const response = await fetchWithAuth(
         `${import.meta.env.VITE_API_BASE_URL}/api/calendar/revoke`,
         {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`
-          }
+          method: 'DELETE'
         }
       )
 

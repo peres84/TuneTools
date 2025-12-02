@@ -39,15 +39,18 @@ export function SongPlayerPage() {
 
       try {
         // Try with authentication first if available
-        const headers: HeadersInit = {}
+        let response
         if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`
+          const { fetchWithAuth } = await import('../utils/apiClient')
+          response = await fetchWithAuth(
+            `${import.meta.env.VITE_API_BASE_URL}/api/songs/${songId}`
+          )
+        } else {
+          // Public access (for shared songs)
+          response = await fetch(
+            `${import.meta.env.VITE_API_BASE_URL}/api/songs/${songId}`
+          )
         }
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/songs/${songId}`,
-          { headers }
-        )
 
         if (!response.ok) {
           throw new Error('Failed to fetch song')

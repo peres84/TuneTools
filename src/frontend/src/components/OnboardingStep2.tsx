@@ -20,13 +20,9 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
     queryFn: async () => {
       if (!session?.access_token) return null
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/status`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        }
+      const { fetchWithAuth } = await import('../utils/apiClient')
+      const response = await fetchWithAuth(
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/status`
       )
 
       if (!response.ok) return null
@@ -64,13 +60,9 @@ export function OnboardingStep2({ onComplete, onBack }: OnboardingStep2Props) {
     mutationFn: async () => {
       if (!session?.access_token) throw new Error('Not authenticated')
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/authorize`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        }
+      const { fetchWithAuth } = await import('../utils/apiClient')
+      const response = await fetchWithAuth(
+        `${import.meta.env.VITE_API_BASE_URL}/api/calendar/authorize`
       )
 
       if (!response.ok) throw new Error('Failed to get authorization URL')
