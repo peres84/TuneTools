@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { MusicalNoteIcon, SparklesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -219,6 +219,27 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
 
           setStatusMessage('Generating lyrics and music tags...')
           const song = await response.json()
+          
+          // Debug: Log the received song data
+          console.log('🎵 [SongGenerator] Received song data:', {
+            title: song.title,
+            description: song.description,
+            genre_tags: song.genre_tags,
+            lyrics_length: song.lyrics?.length || 0,
+            lyrics_preview: song.lyrics?.substring(0, 200) || 'No lyrics',
+            has_verse: song.lyrics?.toLowerCase().includes('[verse]'),
+            has_chorus: song.lyrics?.toLowerCase().includes('[chorus]'),
+            audio_url: song.audio_url
+          })
+          
+          // Debug: Log full lyrics to verify completeness
+          if (song.lyrics) {
+            console.log('📝 [SongGenerator] Full lyrics:\n', song.lyrics)
+            const verseCount = (song.lyrics.toLowerCase().match(/\[verse\]/g) || []).length
+            const chorusCount = (song.lyrics.toLowerCase().match(/\[chorus\]/g) || []).length
+            console.log(`📊 [SongGenerator] Section counts - Verse: ${verseCount}, Chorus: ${chorusCount}`)
+          }
+          
           return song
         },
         {
@@ -600,7 +621,7 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
               {generateMutation.data.description}
             </p>
             <div className="flex flex-wrap gap-2 justify-center mb-6">
-              {generateMutation.data.genre_tags.split(',').map((tag: string, index: number) => (
+              {generateMutation.data.genre_tags && generateMutation.data.genre_tags.split(/[\s,]+/).filter((tag: string) => tag.trim()).map((tag: string, index: number) => (
                 <span
                   key={index}
                   className="px-3 py-1 bg-brand-primary/20 text-brand-primary dark:text-brand-secondary rounded-full text-sm font-medium"

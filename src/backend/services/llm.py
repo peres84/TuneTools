@@ -83,6 +83,7 @@ class LLMService:
                 log_handler.info("[AI] Trying OpenAI (primary)...")
                 response = self._call_openai(prompt)
                 log_handler.info("[OK] OpenAI generated song content")
+                log_handler.info(f"[DEBUG] Raw OpenAI response length: {len(response)} chars")
                 return self._parse_and_validate_response(response)
             except Exception as e:
                 log_handler.warning("OpenAI failed: {str(e)}")
@@ -93,6 +94,7 @@ class LLMService:
                 log_handler.info("[AI] Trying Gemini (fallback)...")
                 response = self._call_gemini(prompt)
                 log_handler.info("[OK] Gemini generated song content")
+                log_handler.info(f"[DEBUG] Raw Gemini response length: {len(response)} chars")
                 return self._parse_and_validate_response(response)
             except Exception as e:
                 log_handler.error("Gemini failed: {str(e)}")
@@ -196,37 +198,57 @@ BAD Examples:
 - "happy song" (too vague, not 5 components)
 - "death metal screaming chaos" (not YuE-friendly)
 
-LYRICS REQUIREMENTS (CRITICAL):
-- Structure: ONE [verse] section, then ONE [chorus] section (TOTAL: 2 sections only)
-- Verse: 6-8 lines (~30 seconds when sung)
-- Chorus: 4-6 lines (~30 seconds when sung)
-- Total song length: ~60 seconds (verse + chorus)
+LYRICS REQUIREMENTS (CRITICAL - MUST INCLUDE BOTH SECTIONS):
+- Structure: EXACTLY ONE [verse] section, then EXACTLY ONE [chorus] section (TOTAL: 2 sections ONLY)
+- Verse: EXACTLY 4 lines (concise and focused)
+- Chorus: 4-6 lines maximum (catchy and memorable)
+- Total song length: ~60 seconds when sung
 - Separate sections with DOUBLE newline (\\n\\n)
 - Tell a complete story in just these 2 sections: weather → news → calendar/activities → motivation
 - Keep language simple, singable, and conversational
 - Make it personal and relevant to TODAY
-- DO NOT add extra verses or choruses
+- DO NOT add extra verses, choruses, bridges, outros, or any other sections
+- DO NOT repeat sections (no [verse] [chorus] [verse] [chorus] pattern)
+- SIMPLE STRUCTURE ONLY: [verse] then [chorus], nothing else
+- BOTH [verse] AND [chorus] sections are MANDATORY - the song is incomplete without both
 
-CORRECT Format:
+CORRECT Format (SIMPLE STRUCTURE - NO REPEATS):
 [verse]
-Line 1: Brief weather mention (one line only)
-Line 2: News headline 1
-Line 3: News headline 2
-Line 4: Calendar activity or personal day
-Line 5: Calendar activity or personal day
-Line 6: Transition to chorus theme
+Line 1: Brief weather mention
+Line 2: News headline or calendar activity
+Line 3: News headline or calendar activity  
+Line 4: Transition to chorus
 
 [chorus]
 Line 1: Main message/hook
-Line 2: Main message/hook
+Line 2: Main message/hook (can repeat line 1 for emphasis)
 Line 3: Motivational line
 Line 4: Closing hook
+Line 5-6: Optional additional hook lines (max 6 lines total)
+
+WRONG Examples (DO NOT DO THIS):
+❌ [verse] [chorus] [verse] [chorus] - NO REPEATING SECTIONS
+❌ [verse] [chorus] [bridge] [outro] - NO EXTRA SECTIONS
+❌ Multiple verses or choruses - ONLY ONE OF EACH
+
+RIGHT Example:
+✅ [verse] [chorus] - SIMPLE AND COMPLETE
+
+CRITICAL VALIDATION CHECKLIST (MUST PASS ALL):
+✓ Does your response include EXACTLY ONE [verse] section? (REQUIRED)
+✓ Does your response include EXACTLY ONE [chorus] section? (REQUIRED)
+✓ Are both sections separated by a double newline?
+✓ Is the verse EXACTLY 4 lines?
+✓ Is the chorus 4-6 lines maximum?
+✓ Are there NO other sections (no [bridge], [outro], [intro], etc.)?
+✓ Are there NO repeated sections (no second verse or chorus)?
 
 IMPORTANT:
 - Return ONLY valid JSON, no markdown, no code blocks
 - Don't put too many words in a single line
-- Keep it under 30 seconds per section
-- Make it sound natural when sung"""
+- Make it sound natural when sung
+- VERIFY the structure is EXACTLY: [verse] (4 lines) then [chorus] (4-6 lines)
+- If you add ANY extra sections or repeat sections, the lyrics will be REJECTED"""
 
         return prompt
     
@@ -241,7 +263,7 @@ IMPORTANT:
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a music producer creating personalized daily songs. Generate song specifications in JSON format following YuE music generation guidelines."
+                    "content": "You are a music producer creating personalized daily songs. Generate song specifications in JSON format following YuE music generation guidelines. CRITICAL RULES: 1) EXACTLY ONE [verse] section (4 lines), 2) EXACTLY ONE [chorus] section (4-6 lines), 3) NO repeating sections, 4) NO bridges, outros, or intros, 5) SIMPLE structure: [verse] then [chorus] only. Any deviation will be rejected."
                 },
                 {
                     "role": "user",
@@ -261,7 +283,10 @@ IMPORTANT:
         
         genai.configure(api_key=GEMINI_API_KEY)
         # Use configured Gemini model
-        model = genai.GenerativeModel(GEMINI_MODEL)
+        model = genai.GenerativeModel(
+            GEMINI_MODEL,
+            system_instruction="You are a music producer creating personalized daily songs. CRITICAL RULES: 1) EXACTLY ONE [verse] section (4 lines), 2) EXACTLY ONE [chorus] section (4-6 lines), 3) NO repeating sections, 4) NO bridges, outros, or intros, 5) SIMPLE structure: [verse] then [chorus] only. Any deviation will be rejected."
+        )
         
         response = model.generate_content(
             prompt,
@@ -270,6 +295,8 @@ IMPORTANT:
                 "max_output_tokens": 1500,
             }
         )
+        
+        log_handler.info(f"[DEBUG] Gemini response candidates: {len(response.candidates) if hasattr(response, 'candidates') else 'N/A'}")
         
         return response.text
     
@@ -312,15 +339,33 @@ IMPORTANT:
             # Count sections
             verse_count = lyrics_lower.count("[verse]")
             chorus_count = lyrics_lower.count("[chorus]")
+            bridge_count = lyrics_lower.count("[bridge]")
+            outro_count = lyrics_lower.count("[outro]")
+            intro_count = lyrics_lower.count("[intro]")
             
+            log_handler.info(f"[DEBUG] Lyrics validation - Verse: {verse_count}, Chorus: {chorus_count}, Bridge: {bridge_count}, Outro: {outro_count}, Intro: {intro_count}")
+            log_handler.info(f"[DEBUG] Total lyrics length: {len(lyrics)} characters")
+            
+            # Check for required sections
             if verse_count < 1:
+                log_handler.error(f"[ERROR] Lyrics missing [verse] section. Lyrics preview: {lyrics[:200]}")
                 raise ValueError("Lyrics missing [verse] section")
             if chorus_count < 1:
+                log_handler.error(f"[ERROR] Lyrics missing [chorus] section. Lyrics preview: {lyrics[:200]}")
                 raise ValueError("Lyrics missing [chorus] section")
             
-            # Warn if too many sections (should be exactly 1 verse + 1 chorus = ~60s)
-            if verse_count > 1 or chorus_count > 1:
-                log_handler.warning(f"[WARN] Song has {verse_count} verse(s) and {chorus_count} chorus(es). Expected: 1 verse + 1 chorus for ~60s song")
+            # Reject if too many sections (should be exactly 1 verse + 1 chorus)
+            if verse_count > 1:
+                log_handler.error(f"[ERROR] Too many verses! Found {verse_count}, expected 1. Rejecting lyrics.")
+                raise ValueError(f"Too many verses: {verse_count}. Only 1 verse allowed for 60-second songs.")
+            if chorus_count > 1:
+                log_handler.error(f"[ERROR] Too many choruses! Found {chorus_count}, expected 1. Rejecting lyrics.")
+                raise ValueError(f"Too many choruses: {chorus_count}. Only 1 chorus allowed for 60-second songs.")
+            
+            # Reject if extra sections found
+            if bridge_count > 0 or outro_count > 0 or intro_count > 0:
+                log_handler.error(f"[ERROR] Extra sections found! Bridge: {bridge_count}, Outro: {outro_count}, Intro: {intro_count}. Only [verse] and [chorus] allowed.")
+                raise ValueError(f"Extra sections not allowed. Found: bridge={bridge_count}, outro={outro_count}, intro={intro_count}. Only [verse] and [chorus] permitted.")
             
             # Validate genre tags (at least 3 components)
             genre_tags = data["genre_tags"].strip()
@@ -334,14 +379,30 @@ IMPORTANT:
             if len(verse_lines) > 8:
                 log_handler.warning("Warning: Verse has {len(verse_lines)} lines (max 8 recommended)")
             
+            # Split lyrics into sections for detailed logging
+            sections = lyrics.split('[chorus]')
+            verse_section = sections[0] if len(sections) > 0 else ""
+            chorus_section = sections[1] if len(sections) > 1 else ""
+            
+            verse_lines = [line for line in verse_section.split('\n') if line.strip() and not line.strip().startswith('[')]
+            chorus_lines = [line for line in chorus_section.split('\n') if line.strip()]
+            
             log_handler.info(f"[OK] Validated song content:")
             log_handler.info(f"   Title: {data['title']}")
             log_handler.info(f"   Description: {data['description']}")
             log_handler.info(f"   Genre: {genre_tags}")
             log_handler.info(f"   Lyrics: {len(lyrics)} characters")
+            log_handler.info(f"   Verse lines: {len(verse_lines)}")
+            log_handler.info(f"   Chorus lines: {len(chorus_lines)}")
             log_handler.info(f"\n--- FULL LYRICS ---")
             log_handler.info(lyrics)
             log_handler.info(f"--- END LYRICS ---\n")
+            log_handler.info(f"[DEBUG] Verse section ({len(verse_lines)} lines):")
+            for i, line in enumerate(verse_lines, 1):
+                log_handler.info(f"  {i}. {line}")
+            log_handler.info(f"[DEBUG] Chorus section ({len(chorus_lines)} lines):")
+            for i, line in enumerate(chorus_lines, 1):
+                log_handler.info(f"  {i}. {line}")
             
             return data
             

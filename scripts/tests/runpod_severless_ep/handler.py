@@ -99,6 +99,17 @@ def generate_song(job):
         print(f"📝 Genre: {genre_tags}")
         print(f"📝 Lyrics length: {len(lyrics)} characters")
         
+        # Debug: Check for verse and chorus sections
+        has_verse = '[verse]' in lyrics.lower()
+        has_chorus = '[chorus]' in lyrics.lower()
+        print(f"🔍 Lyrics validation: verse={has_verse}, chorus={has_chorus}")
+        
+        if not has_verse or not has_chorus:
+            print(f"⚠️ WARNING: Missing sections! Full lyrics:\n{lyrics}")
+        
+        # Debug: Show full lyrics for verification
+        print(f"📄 Full lyrics:\n{lyrics}")
+        
         # Create output directory
         os.makedirs('/tmp/output', exist_ok=True)
         
@@ -112,13 +123,14 @@ def generate_song(job):
         print("🚀 Starting YuE inference...")
         
         # Run YuE
+        # Note: Increased max_new_tokens from 2500 to 4000 to generate longer songs (~60s instead of ~25s)
         result = subprocess.run([
             'python', 'infer.py',
             '--cuda_idx', '0',
             '--stage1_model', STAGE1_PATH,
             '--stage2_model', STAGE2_PATH,
             '--stage2_batch_size', '4',
-            '--max_new_tokens', '2500',
+            '--max_new_tokens', '4000',  # Increased from 2500 to support 60-second songs (verse + chorus)
             '--run_n_segments', '2',
             '--genre_txt', '/tmp/genre.txt',
             '--lyrics_txt', '/tmp/lyrics.txt',
