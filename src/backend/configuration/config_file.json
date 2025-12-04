@@ -61,7 +61,7 @@
             "endpoint_route": "/preferences"
         },
         "songs_generate_endpoint": {
-            "request_limit": 2,
+            "request_limit": 5,
             "unit_of_time_for_limit": "hour",
             "endpoint_prefix": "/api/songs",
             "endpoint_tag": "songs",
