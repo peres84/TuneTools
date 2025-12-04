@@ -8,6 +8,17 @@ export function OAuthCallbackPage() {
   const message = searchParams.get('message')
 
   useEffect(() => {
+    // Notify parent window of success/error before closing
+    if (status === 'success' || status === 'error') {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ 
+          type: 'calendar-oauth-complete', 
+          status,
+          message 
+        }, window.location.origin)
+      }
+    }
+
     // Auto-close after 3 seconds on success
     if (status === 'success') {
       const timer = setTimeout(() => {
@@ -15,7 +26,7 @@ export function OAuthCallbackPage() {
       }, 3000)
       return () => clearTimeout(timer)
     }
-  }, [status])
+  }, [status, message])
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-brand-dark flex items-center justify-center p-4">

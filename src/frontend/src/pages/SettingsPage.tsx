@@ -457,6 +457,31 @@ function CalendarIntegration() {
     refetchOnMount: 'always', // Force refetch on mount
   })
 
+  // Listen for OAuth completion from popup
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Verify origin for security
+      if (event.origin !== window.location.origin) return
+      
+      if (event.data?.type === 'calendar-oauth-complete') {
+        console.log('📅 [Settings] OAuth complete, refreshing calendar status')
+        
+        // Refetch calendar status
+        queryClient.invalidateQueries({ queryKey: ['calendarStatus'] })
+        
+        // Show success/error message
+        if (event.data.status === 'success') {
+          setStatusMessage({ type: 'success', message: 'Google Calendar connected successfully!' })
+        } else if (event.data.status === 'error') {
+          setStatusMessage({ type: 'error', message: event.data.message || 'Failed to connect calendar' })
+        }
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [queryClient])
+
   // Connect calendar mutation
   const connectMutation = useMutation({
     mutationFn: async () => {
@@ -474,11 +499,25 @@ function CalendarIntegration() {
       const left = window.screen.width / 2 - width / 2
       const top = window.screen.height / 2 - height / 2
       
-      window.open(
+      const popup = window.open(
         data.authorization_url,
         'Google Calendar Authorization',
         `width=${width},height=${height},left=${left},top=${top}`
       )
+      
+      // Poll to detect when popup closes (fallback if postMessage doesn't work)
+      if (popup) {
+        const pollTimer = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(pollTimer)
+            console.log('📅 [Settings] Popup closed, refreshing calendar status')
+            // Wait a moment for the callback to complete, then refresh
+            setTimeout(() => {
+              queryClient.invalidateQueries({ queryKey: ['calendarStatus'] })
+            }, 500)
+          }
+        }, 500)
+      }
     },
     onError: (err: Error) => {
       setStatusMessage({ type: 'error', message: getUserFriendlyErrorMessage(err) })
