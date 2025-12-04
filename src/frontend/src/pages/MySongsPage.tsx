@@ -45,9 +45,9 @@ export function MySongsPage() {
       return data
     },
     enabled: !!session?.access_token,
-    staleTime: Infinity, // Data never becomes stale automatically
+    staleTime: 5 * 60 * 1000, // Data becomes stale after 5 minutes
     gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
-    refetchOnMount: false, // Don't refetch when component mounts
+    refetchOnMount: true, // Refetch when component mounts (to show new songs)
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
     refetchOnReconnect: false // Don't refetch on reconnect
   })

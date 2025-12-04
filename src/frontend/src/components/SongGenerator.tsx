@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getUserFriendlyErrorMessage, logError } from '../utils/errorMessages'
 import { withRetry } from '../utils/retryMechanism'
+import { cacheManager, CACHE_KEYS } from '../utils/cacheManager'
 
 interface Song {
   id: string
@@ -264,9 +265,16 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
       setIsGeneratingPersistent(false)
       // Clear generation state from localStorage
       localStorage.removeItem('song_generation_state')
+      
+      // Clear cache to ensure fresh data
+      cacheManager.remove(CACHE_KEYS.SONGS_LIST)
+      cacheManager.remove(CACHE_KEYS.ALBUMS_LIST)
+      
       // Invalidate and refetch today's songs data
       queryClient.invalidateQueries({ queryKey: ['todaySong'] })
       queryClient.invalidateQueries({ queryKey: ['allSongs'] })
+      queryClient.invalidateQueries({ queryKey: ['albums'] })
+      
       // Notify parent that generation completed
       if (onGenerationComplete) {
         onGenerationComplete(song)
