@@ -60,9 +60,15 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
       return response.json()
     },
     onSuccess: () => {
-      setEditingSong(null) // Close modal on success
+      // Clear cache to ensure UI updates
+      cacheManager.remove(CACHE_KEYS.SONGS_LIST)
+      cacheManager.remove(CACHE_KEYS.ALBUMS_LIST)
+      
       queryClient.invalidateQueries({ queryKey: ['allSongs'] })
       queryClient.invalidateQueries({ queryKey: ['album'] })
+      queryClient.invalidateQueries({ queryKey: ['albums'] })
+      
+      setEditingSong(null) // Close modal on success
     }
   })
 

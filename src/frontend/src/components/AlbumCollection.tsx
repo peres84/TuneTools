@@ -8,6 +8,7 @@ import { ConfirmModal } from './ConfirmModal'
 import { AlbumSkeleton } from './LoadingSkeletons'
 import { getUserFriendlyErrorMessage } from '../utils/errorMessages'
 import { cacheManager, CACHE_KEYS } from '../utils/cacheManager'
+import fallbackAlbumCover from '../assets/logo-disk.png'
 
 interface Album {
   id: string
@@ -29,6 +30,7 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
   const [editingAlbum, setEditingAlbum] = useState<Album | null>(null)
   const [deletingAlbum, setDeletingAlbum] = useState<Album | null>(null)
   const [loadingAlbumId, setLoadingAlbumId] = useState<string | null>(null)
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
 
   const { data: albums, isLoading, error } = useQuery({
     queryKey: ['albums'],
@@ -142,9 +144,16 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
         }
       )
       if (!response.ok) throw new Error('Failed to update vinyl disk')
-      return response.json()
+      return { albumId, data: await response.json() }
     },
-    onSuccess: () => {
+    onSuccess: ({ albumId }) => {
+      // Clear error state for this album since we successfully updated the image
+      setImageErrors(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(albumId)
+        return newSet
+      })
+      
       queryClient.invalidateQueries({ queryKey: ['albums'] })
       setLoadingAlbumId(null)
     },
@@ -254,9 +263,13 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
           {/* Album artwork */}
           <div className="relative aspect-square overflow-hidden bg-gray-200 dark:bg-gray-700">
             <img
-              src={`${album.vinyl_disk_url}?t=${Date.now()}`}
+              src={imageErrors.has(album.id) ? fallbackAlbumCover : `${album.vinyl_disk_url}?t=${Date.now()}`}
               alt={album.name}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              onError={() => {
+                console.log(`⚠️ [AlbumCollection] Failed to load image for album ${album.id}, using fallback`)
+                setImageErrors(prev => new Set(prev).add(album.id))
+              }}
               key={album.vinyl_disk_url}
             />
             {/* Loading overlay */}

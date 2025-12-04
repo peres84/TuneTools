@@ -135,16 +135,17 @@ Visual elements:
     
     def _generate_with_gemini(self, prompt: str) -> bytes:
         """
-        Generate image using Google Gemini 2.5 Flash Image
+        Generate image using Gemini 2.5 Flash Image
         
-        Uses the Gemini API with gemini-2.5-flash-image model for image generation.
+        Uses the official Gemini 2.5 Flash Image model with Imagen 3 integration.
+        This model is available in the free tier of the Gemini API.
         """
         import google.generativeai as genai
         
         # Configure Gemini
         genai.configure(api_key=GEMINI_API_KEY)
         
-        # Use gemini-2.5-flash-image model
+        # Use Gemini 2.5 Flash Image model (supports image generation)
         model = genai.GenerativeModel(GEMINI_MODEL)
         
         # Generate image

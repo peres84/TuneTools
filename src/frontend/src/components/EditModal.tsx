@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface EditModalProps {
@@ -22,18 +22,35 @@ export function EditModal({
 }: EditModalProps) {
   const [value, setValue] = useState(initialValue)
 
+  // Reset value when modal opens or initialValue changes
+  useEffect(() => {
+    if (isOpen) {
+      setValue(initialValue)
+    }
+  }, [isOpen, initialValue])
+
   if (!isOpen) return null
 
   const handleSave = () => {
     if (value.trim()) {
       onSave(value.trim())
-      onClose()
+      // Don't call onClose here - let parent handle it after mutation success
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[150] p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
