@@ -263,13 +263,14 @@ export function AlbumCollection({ onAlbumClick }: AlbumCollectionProps) {
           {/* Album artwork */}
           <div className="relative aspect-square overflow-hidden bg-gray-200 dark:bg-gray-700">
             <img
-              src={imageErrors.has(album.id) ? fallbackAlbumCover : `${album.vinyl_disk_url}?t=${Date.now()}`}
+              src={imageErrors.has(album.id) ? fallbackAlbumCover : album.vinyl_disk_url}
               alt={album.name}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
               onError={() => {
                 console.log(`⚠️ [AlbumCollection] Failed to load image for album ${album.id}, using fallback`)
                 setImageErrors(prev => new Set(prev).add(album.id))
               }}
+              loading="lazy"
               key={album.vinyl_disk_url}
             />
             {/* Loading overlay */}

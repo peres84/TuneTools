@@ -139,4 +139,5 @@ export const CACHE_KEYS = {
   USER_STATS: 'user_stats',
   CALENDAR_ACTIVITIES: 'calendar_activities',
   NEWS_FEED: 'news_feed',
+  AUDIO_URL: 'audio_url_', // Prefix for audio URL caching (append song_id)
 } as const

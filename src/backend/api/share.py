@@ -74,7 +74,7 @@ async def get_shared_song(request: Request, share_token: str):
             try:
                 signed_url = supabase.storage.from_("audio_files").create_signed_url(
                     storage_path,
-                    3600  # 1 hour expiry
+                    86400  # 24 hour expiry (allows browser caching)
                 )
                 if signed_url and 'signedURL' in signed_url:
                     audio_url = signed_url['signedURL']
