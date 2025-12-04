@@ -181,6 +181,7 @@ export function SongList({ songs, albumName, onSongClick }: SongListProps) {
                     className="relative z-10"
                   >
                     <OptionsMenu
+                      mode="dropdown"
                       items={[
                         {
                           label: 'Rename Song',

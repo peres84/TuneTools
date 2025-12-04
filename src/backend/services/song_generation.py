@@ -84,16 +84,51 @@ class SongGenerationService:
         start_time = time.time()
         
         try:
-            # Send request with timeout (wrapped in thread to prevent blocking)
+            # Send request with timeout using RunPod's async API
             if progress_callback:
                 progress_callback("Waiting for YuE model (7-12 minutes)...")
             
+            # Use run() instead of run_sync() for proper async handling
+            # This returns immediately and we poll for results
             import asyncio
-            job_result = await asyncio.to_thread(
-                self.endpoint.run_sync,
-                request_input,
-                timeout=self.default_timeout
-            )
+            
+            log_handler.info("[RUNPOD] Submitting job to RunPod...")
+            job = self.endpoint.run(request_input)
+            
+            log_handler.info(f"[RUNPOD] Job submitted: {job.job_id}")
+            log_handler.info("[RUNPOD] Polling for results (non-blocking)...")
+            
+            # Poll for results with async sleep to avoid blocking
+            poll_interval = 10  # seconds
+            max_wait = self.default_timeout
+            elapsed_poll = 0
+            
+            while elapsed_poll < max_wait:
+                # Check job status (non-blocking)
+                status = await asyncio.to_thread(job.status)
+                
+                if status == "COMPLETED":
+                    log_handler.info("[RUNPOD] Job completed!")
+                    job_result = await asyncio.to_thread(job.output)
+                    break
+                elif status == "FAILED":
+                    error = await asyncio.to_thread(lambda: getattr(job, 'error', 'Unknown error'))
+                    raise Exception(f"RunPod job failed: {error}")
+                elif status in ["IN_QUEUE", "IN_PROGRESS"]:
+                    # Still processing, wait and check again
+                    await asyncio.sleep(poll_interval)
+                    elapsed_poll += poll_interval
+                    
+                    # Update progress message
+                    if progress_callback:
+                        progress_callback(self.get_status_message(time.time() - start_time))
+                else:
+                    log_handler.warning(f"[RUNPOD] Unknown status: {status}")
+                    await asyncio.sleep(poll_interval)
+                    elapsed_poll += poll_interval
+            
+            if elapsed_poll >= max_wait:
+                raise Exception(f"RunPod job timed out after {max_wait} seconds")
             
             elapsed = time.time() - start_time
             log_handler.info(f"[TIME] Generation took {elapsed / 60:.1f} minutes")
@@ -111,7 +146,7 @@ class SongGenerationService:
             
         except Exception as e:
             error_msg = f"Song generation failed: {str(e)}"
-            log_handler.error("{error_msg}")
+            log_handler.error(f"{error_msg}")
             if progress_callback:
                 progress_callback(f"Error: {error_msg}")
             raise Exception(error_msg)

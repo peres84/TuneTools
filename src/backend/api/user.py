@@ -355,7 +355,7 @@ async def get_user_news(
         local_count = max_articles - worldwide_count
         
         # Fetch worldwide news (no location restriction)
-        worldwide_articles = news_service.fetch_news(
+        worldwide_articles = await news_service.fetch_news(
             user_categories=user_categories,
             location="",  # Empty string for worldwide news
             max_articles=worldwide_count
@@ -368,7 +368,7 @@ async def get_user_news(
         try:
             # You could fetch from user profile or use a default location
             # For now, we'll use US as a fallback for some local flavor
-            local_articles = news_service.fetch_news(
+            local_articles = await news_service.fetch_news(
                 user_categories=user_categories,
                 location="US",  # Could be dynamic based on user's saved location
                 max_articles=local_count
