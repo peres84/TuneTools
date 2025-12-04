@@ -33,6 +33,7 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
   const [retryCount, setRetryCount] = useState<number>(0)
   const [customTitle, setCustomTitle] = useState<string>('')
   const [customCover, setCustomCover] = useState<File | null>(null)
+  const [useDefaultCover, setUseDefaultCover] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [isGeneratingPersistent, setIsGeneratingPersistent] = useState(false)
   
@@ -172,6 +173,9 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
           }
           if (customCover) {
             formData.append('custom_cover', customCover)
+          }
+          if (useDefaultCover) {
+            formData.append('use_default_cover', 'true')
           }
           // Add preference overrides if provided
           if (overrideGenres.length > 0) {
@@ -391,29 +395,77 @@ export function SongGenerator({ onGenerationStart, onGenerationComplete }: SongG
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Custom Album Cover (Optional)
+                  Album Cover (Optional)
                 </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setCustomCover(e.target.files?.[0] || null)}
-                  disabled={generateMutation.isPending || checkingToday}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-primary file:text-white hover:file:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                {customCover && (
-                  <div className="mt-2 flex items-center justify-between">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Selected: {customCover.name}
-                    </p>
+                <div className="space-y-3">
+                  {/* Cover Options */}
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => setCustomCover(null)}
+                      onClick={() => {
+                        setCustomCover(null)
+                        setUseDefaultCover(false)
+                      }}
                       disabled={generateMutation.isPending || checkingToday}
-                      className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`flex-1 px-4 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        !customCover && !useDefaultCover
+                          ? 'bg-brand-primary text-white border-brand-primary'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-brand-primary'
+                      }`}
                     >
-                      Remove
+                      AI Generated
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCustomCover(null)
+                        setUseDefaultCover(true)
+                      }}
+                      disabled={generateMutation.isPending || checkingToday}
+                      className={`flex-1 px-4 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        useDefaultCover
+                          ? 'bg-brand-primary text-white border-brand-primary'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-brand-primary'
+                      }`}
+                    >
+                      Default Image
                     </button>
                   </div>
-                )}
+                  
+                  {/* File Upload (only show if not using default) */}
+                  {!useDefaultCover && (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          setCustomCover(e.target.files?.[0] || null)
+                          setUseDefaultCover(false)
+                        }}
+                        disabled={generateMutation.isPending || checkingToday}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-primary file:text-white hover:file:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      {customCover && (
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Selected: {customCover.name}
+                          </p>
+                          <button
+                            onClick={() => setCustomCover(null)}
+                            disabled={generateMutation.isPending || checkingToday}
+                            className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  
+                  {useDefaultCover && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400 italic">
+                      Using app logo as album cover
+                    </p>
+                  )}
+                </div>
               </div>
               
               {/* Preference Overrides */}

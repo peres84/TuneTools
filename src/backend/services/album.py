@@ -60,7 +60,8 @@ class AlbumService:
         song_themes: List[str],
         user_preferences: Dict[str, Any],
         date: Optional[datetime] = None,
-        custom_cover_data: Optional[bytes] = None
+        custom_cover_data: Optional[bytes] = None,
+        use_default_cover: bool = False
     ) -> tuple[Album, bool]:
         """
         Get existing weekly album or create new one
@@ -95,7 +96,8 @@ class AlbumService:
             week_end,
             song_themes,
             user_preferences,
-            custom_cover_data
+            custom_cover_data,
+            use_default_cover
         )
         return album, image_failed
     
@@ -125,17 +127,22 @@ class AlbumService:
         week_end: datetime,
         song_themes: List[str],
         user_preferences: Dict[str, Any],
-        custom_cover_data: Optional[bytes] = None
+        custom_cover_data: Optional[bytes] = None,
+        use_default_cover: bool = False
     ) -> tuple[Album, bool]:
         """Create new weekly album with artwork and vinyl disk"""
         
         # Generate album name
         album_name = f"Week of {week_start.strftime('%B %d, %Y')}"
         
-        # Use custom cover or generate artwork
+        # Determine artwork source
         if custom_cover_data:
             log_handler.info("[IMAGE] Using custom cover image")
             artwork_data = custom_cover_data
+            image_failed = False
+        elif use_default_cover:
+            log_handler.info("[IMAGE] Using default app logo")
+            artwork_data = self.image_service._generate_default_placeholder()
             image_failed = False
         else:
             log_handler.info("[IMAGE] Generating album artwork...")

@@ -52,6 +52,7 @@ async def generate_song(
     location: Optional[str] = Form(None),
     custom_title: Optional[str] = Form(None),
     custom_cover: Optional[UploadFile] = File(None),
+    use_default_cover: Optional[str] = Form(None),
     override_genres: Optional[str] = Form(None),
     override_vocal: Optional[str] = Form(None),
     override_mood: Optional[str] = Form(None),
@@ -72,6 +73,12 @@ async def generate_song(
     
     Args:
         location: City name or coordinates (optional, uses user profile if not provided)
+        custom_title: Custom song title (optional, AI-generated if not provided)
+        custom_cover: Custom album cover image file (optional)
+        use_default_cover: Use default app logo as cover (optional, "true" to enable)
+        override_genres: JSON array of genres to override user preferences (optional)
+        override_vocal: Vocal preference override (optional)
+        override_mood: Mood preference override (optional)
         user_id: Authenticated user ID
         
     Returns:
@@ -160,18 +167,23 @@ async def generate_song(
         log_handler.info(f"  - Genre Tags: {song_content['genre_tags']}")
         log_handler.info(f"  - Lyrics Preview: {song_content['lyrics'][:100]}...")
         
-        # Step 3: Get or create weekly album (with optional custom cover)
+        # Step 3: Get or create weekly album (with optional custom cover or default)
         log_handler.info("[ALBUM] Step 3: Getting weekly album...")
         custom_cover_data = None
+        use_default = use_default_cover == 'true'
+        
         if custom_cover:
             log_handler.info("[ALBUM] Using custom cover image")
             custom_cover_data = await custom_cover.read()
+        elif use_default:
+            log_handler.info("[ALBUM] Using default app logo as cover")
         
         album, image_generation_failed = album_service.get_or_create_weekly_album(
             user_id=user_id,
             song_themes=[song_content['title']],
             user_preferences=context_data.get('user_preferences', {}),
-            custom_cover_data=custom_cover_data
+            custom_cover_data=custom_cover_data,
+            use_default_cover=use_default
         )
         log_handler.info(f"[ALBUM] [OK] Album ready: {album.name}")
         log_handler.info(f"  - Album ID: {album.id}")
