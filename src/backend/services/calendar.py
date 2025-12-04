@@ -5,6 +5,7 @@ import os
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import httpx
 
 from models.context import CalendarActivity
 from db.supabase_client import supabase
@@ -69,8 +70,6 @@ class CalendarService:
         Returns:
             dict: Token information
         """
-        import requests
-        
         # Exchange code for tokens
         token_url = "https://oauth2.googleapis.com/token"
         data = {
@@ -82,17 +81,18 @@ class CalendarService:
         }
         
         try:
-            response = requests.post(token_url, data=data, timeout=10)
-            response.raise_for_status()
+            async with httpx.AsyncClient() as client:
+                response = await client.post(token_url, data=data, timeout=10)
+                response.raise_for_status()
+                
+                tokens = response.json()
+                
+                # Store tokens securely in Supabase
+                await self._store_credentials(user_id, tokens)
+                
+                return tokens
             
-            tokens = response.json()
-            
-            # Store tokens securely in Supabase
-            await self._store_credentials(user_id, tokens)
-            
-            return tokens
-            
-        except requests.exceptions.RequestException as e:
+        except httpx.HTTPError as e:
             raise Exception(f"OAuth callback failed: {str(e)}")
     
     async def _store_credentials(
@@ -230,8 +230,6 @@ class CalendarService:
         Returns:
             str: New access token
         """
-        import requests
-        
         token_url = "https://oauth2.googleapis.com/token"
         data = {
             "client_id": GOOGLE_CLIENT_ID,
@@ -241,17 +239,18 @@ class CalendarService:
         }
         
         try:
-            response = requests.post(token_url, data=data, timeout=10)
-            response.raise_for_status()
+            async with httpx.AsyncClient() as client:
+                response = await client.post(token_url, data=data, timeout=10)
+                response.raise_for_status()
+                
+                tokens = response.json()
+                
+                # Update stored credentials
+                await self._store_credentials(user_id, tokens)
+                
+                return tokens["access_token"]
             
-            tokens = response.json()
-            
-            # Update stored credentials
-            await self._store_credentials(user_id, tokens)
-            
-            return tokens["access_token"]
-            
-        except requests.exceptions.RequestException as e:
+        except httpx.HTTPError as e:
             raise Exception(f"Token refresh failed: {str(e)}")
     
     async def _fetch_events(
@@ -271,8 +270,6 @@ class CalendarService:
         Returns:
             List[CalendarActivity]: Calendar activities
         """
-        import requests
-        
         # Calculate time range - include past events for calendar view
         time_min = (datetime.utcnow() - timedelta(days=days_behind)).isoformat() + "Z"
         time_max = (datetime.utcnow() + timedelta(days=days_ahead)).isoformat() + "Z"
@@ -288,43 +285,44 @@ class CalendarService:
         }
         
         try:
-            response = requests.get(url, headers=headers, params=params, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            activities = []
-            
-            for item in data.get("items", []):
-                # Parse start time
-                start = item.get("start", {})
-                if "dateTime" in start:
-                    start_time = datetime.fromisoformat(start["dateTime"].replace("Z", "+00:00"))
-                    is_all_day = False
-                else:
-                    start_time = datetime.fromisoformat(start["date"])
-                    is_all_day = True
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=headers, params=params, timeout=10)
+                response.raise_for_status()
                 
-                # Parse end time
-                end = item.get("end", {})
-                end_time = None
-                if "dateTime" in end:
-                    end_time = datetime.fromisoformat(end["dateTime"].replace("Z", "+00:00"))
-                elif "date" in end:
-                    end_time = datetime.fromisoformat(end["date"])
+                data = response.json()
+                activities = []
                 
-                activities.append(CalendarActivity(
-                    title=item.get("summary", "Untitled Event"),
-                    start_time=start_time,
-                    end_time=end_time,
-                    location=item.get("location"),
-                    description=item.get("description"),
-                    is_all_day=is_all_day
-                ))
+                for item in data.get("items", []):
+                    # Parse start time
+                    start = item.get("start", {})
+                    if "dateTime" in start:
+                        start_time = datetime.fromisoformat(start["dateTime"].replace("Z", "+00:00"))
+                        is_all_day = False
+                    else:
+                        start_time = datetime.fromisoformat(start["date"])
+                        is_all_day = True
+                    
+                    # Parse end time
+                    end = item.get("end", {})
+                    end_time = None
+                    if "dateTime" in end:
+                        end_time = datetime.fromisoformat(end["dateTime"].replace("Z", "+00:00"))
+                    elif "date" in end:
+                        end_time = datetime.fromisoformat(end["date"])
+                    
+                    activities.append(CalendarActivity(
+                        title=item.get("summary", "Untitled Event"),
+                        start_time=start_time,
+                        end_time=end_time,
+                        location=item.get("location"),
+                        description=item.get("description"),
+                        is_all_day=is_all_day
+                    ))
+                
+                log_handler.info(f"[OK] Fetched {len(activities)} calendar activities")
+                return activities
             
-            log_handler.info(f"[OK] Fetched {len(activities)} calendar activities")
-            return activities
-            
-        except requests.exceptions.RequestException as e:
+        except httpx.HTTPError as e:
             raise Exception(f"Failed to fetch calendar events: {str(e)}")
     
     async def revoke_access(self, user_id: str):

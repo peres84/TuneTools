@@ -146,7 +146,7 @@ async def generate_song(
         # Step 2: Generate lyrics and genre tags (or use custom title)
         if custom_title:
             log_handler.info(f"[AI] Step 2: Using custom title: {custom_title}")
-            song_content = llm_service.generate_song_content(
+            song_content = await llm_service.generate_song_content(
                 weather_data=context_data.get('weather', {}),
                 news_articles=context_data.get('news', []),
                 calendar_activities=context_data.get('calendar', []),
@@ -155,7 +155,7 @@ async def generate_song(
             )
         else:
             log_handler.info("[AI] Step 2: Generating lyrics and genre tags...")
-            song_content = llm_service.generate_song_content(
+            song_content = await llm_service.generate_song_content(
                 weather_data=context_data.get('weather', {}),
                 news_articles=context_data.get('news', []),
                 calendar_activities=context_data.get('calendar', []),
@@ -198,7 +198,7 @@ async def generate_song(
         log_handler.info(f"  - Lyrics ({len(formatted_lyrics)} chars):")
         log_handler.info(f"\n{formatted_lyrics}\n")
         
-        audio_result = song_service.generate_song(
+        audio_result = await song_service.generate_song(
             genre_tags=genre_tags,
             lyrics=formatted_lyrics
         )
@@ -306,10 +306,10 @@ async def _aggregate_context_data(
     # Get weather data
     try:
         if location:
-            weather = weather_service.get_weather_by_city(location)
+            weather = await weather_service.get_weather_by_city(location)
         else:
             # Default to a major city or use user's location from profile
-            weather = weather_service.get_weather_by_city("New York")
+            weather = await weather_service.get_weather_by_city("New York")
         
         context['weather'] = weather.dict()
         log_handler.info(f"[OK] Weather: {weather.weather_condition}, {weather.temp_c}°C")
@@ -320,7 +320,7 @@ async def _aggregate_context_data(
     # Get news articles
     try:
         user_categories = context['user_preferences'].get('categories', ['general'])
-        news_articles = news_service.fetch_news(
+        news_articles = await news_service.fetch_news(
             user_categories=user_categories,
             location="US",
             max_articles=10
@@ -499,7 +499,7 @@ async def list_songs(
                 try:
                     signed_url = supabase.storage.from_("audio_files").create_signed_url(
                         storage_path,
-                        3600  # 1 hour expiry
+                        86400  # 24 hour expiry (allows browser caching)
                     )
                     if signed_url and 'signedURL' in signed_url:
                         song['audio_url'] = signed_url['signedURL']
@@ -622,11 +622,11 @@ async def get_song(
                 else:
                     log_handler.warning(f"Could not extract storage path from URL: {storage_path}")
             
-            # Generate signed URL
+            # Generate signed URL (24 hours for better caching)
             try:
                 signed_url = supabase.storage.from_("audio_files").create_signed_url(
                     storage_path,
-                    3600  # 1 hour expiry
+                    86400  # 24 hour expiry (allows browser caching)
                 )
                 if signed_url and 'signedURL' in signed_url:
                     song.audio_url = signed_url['signedURL']

@@ -42,7 +42,7 @@ class LLMService:
                 "Add OPENAI_API_KEY or GEMINI_API_KEY to .env"
             )
     
-    def generate_song_content(
+    async def generate_song_content(
         self,
         weather_data: Dict[str, Any],
         news_articles: list,
@@ -81,7 +81,7 @@ class LLMService:
         if self.openai_available:
             try:
                 log_handler.info("[AI] Trying OpenAI (primary)...")
-                response = self._call_openai(prompt)
+                response = await self._call_openai(prompt)
                 log_handler.info("[OK] OpenAI generated song content")
                 log_handler.info(f"[DEBUG] Raw OpenAI response length: {len(response)} chars")
                 return self._parse_and_validate_response(response)
@@ -92,7 +92,7 @@ class LLMService:
         if self.gemini_available:
             try:
                 log_handler.info("[AI] Trying Gemini (fallback)...")
-                response = self._call_gemini(prompt)
+                response = await self._call_gemini(prompt)
                 log_handler.info("[OK] Gemini generated song content")
                 log_handler.info(f"[DEBUG] Raw Gemini response length: {len(response)} chars")
                 return self._parse_and_validate_response(response)
@@ -252,13 +252,13 @@ IMPORTANT:
 
         return prompt
     
-    def _call_openai(self, prompt: str) -> str:
+    async def _call_openai(self, prompt: str) -> str:
         """Call OpenAI API"""
         import openai
         
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
         
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
                 {
@@ -277,28 +277,33 @@ IMPORTANT:
         
         return response.choices[0].message.content
     
-    def _call_gemini(self, prompt: str) -> str:
-        """Call Google Gemini API"""
+    async def _call_gemini(self, prompt: str) -> str:
+        """Call Google Gemini API (wrapped in thread to prevent blocking)"""
         import google.generativeai as genai
+        import asyncio
         
-        genai.configure(api_key=GEMINI_API_KEY)
-        # Use configured Gemini model
-        model = genai.GenerativeModel(
-            GEMINI_MODEL,
-            system_instruction="You are a music producer creating personalized daily songs. CRITICAL RULES: 1) EXACTLY ONE [verse] section (4 lines), 2) EXACTLY ONE [chorus] section (4-6 lines), 3) NO repeating sections, 4) NO bridges, outros, or intros, 5) SIMPLE structure: [verse] then [chorus] only. Any deviation will be rejected."
-        )
+        def _sync_gemini_call():
+            genai.configure(api_key=GEMINI_API_KEY)
+            # Use configured Gemini model
+            model = genai.GenerativeModel(
+                GEMINI_MODEL,
+                system_instruction="You are a music producer creating personalized daily songs. CRITICAL RULES: 1) EXACTLY ONE [verse] section (4 lines), 2) EXACTLY ONE [chorus] section (4-6 lines), 3) NO repeating sections, 4) NO bridges, outros, or intros, 5) SIMPLE structure: [verse] then [chorus] only. Any deviation will be rejected."
+            )
+            
+            response = model.generate_content(
+                prompt,
+                generation_config={
+                    "temperature": 0.8,
+                    "max_output_tokens": 1500,
+                }
+            )
+            
+            log_handler.info(f"[DEBUG] Gemini response candidates: {len(response.candidates) if hasattr(response, 'candidates') else 'N/A'}")
+            
+            return response.text
         
-        response = model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.8,
-                "max_output_tokens": 1500,
-            }
-        )
-        
-        log_handler.info(f"[DEBUG] Gemini response candidates: {len(response.candidates) if hasattr(response, 'candidates') else 'N/A'}")
-        
-        return response.text
+        # Run in thread pool to prevent blocking
+        return await asyncio.to_thread(_sync_gemini_call)
     
     def _parse_and_validate_response(self, response: str) -> Dict[str, Any]:
         """

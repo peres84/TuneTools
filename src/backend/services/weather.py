@@ -2,7 +2,7 @@
 Weather Service with caching
 """
 import os
-import requests
+import httpx
 from typing import Dict, Optional
 from datetime import datetime
 from dotenv import load_dotenv
@@ -33,7 +33,7 @@ class WeatherService:
         self.cache: Dict[str, tuple[WeatherData, float]] = {}
         self.cache_ttl = 1800  # 30 minutes in seconds
     
-    def get_weather_by_city(self, city_name: str) -> WeatherData:
+    async def get_weather_by_city(self, city_name: str) -> WeatherData:
         """
         Get weather data by city name
         
@@ -61,21 +61,22 @@ class WeatherService:
         }
         
         try:
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, params=params, timeout=10)
+                response.raise_for_status()
+                
+                data = response.json()
+                weather_data = self._parse_weather_data(data)
+                
+                # Cache result
+                self.cache[cache_key] = (weather_data, time.time())
+                
+                return weather_data
             
-            data = response.json()
-            weather_data = self._parse_weather_data(data)
-            
-            # Cache result
-            self.cache[cache_key] = (weather_data, time.time())
-            
-            return weather_data
-            
-        except requests.exceptions.RequestException as e:
+        except httpx.HTTPError as e:
             raise Exception(f"Failed to fetch weather: {str(e)}")
     
-    def get_weather_by_coords(self, latitude: float, longitude: float) -> WeatherData:
+    async def get_weather_by_coords(self, latitude: float, longitude: float) -> WeatherData:
         """
         Get weather data by coordinates
         
@@ -105,18 +106,19 @@ class WeatherService:
         }
         
         try:
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, params=params, timeout=10)
+                response.raise_for_status()
+                
+                data = response.json()
+                weather_data = self._parse_weather_data(data)
+                
+                # Cache result
+                self.cache[cache_key] = (weather_data, time.time())
+                
+                return weather_data
             
-            data = response.json()
-            weather_data = self._parse_weather_data(data)
-            
-            # Cache result
-            self.cache[cache_key] = (weather_data, time.time())
-            
-            return weather_data
-            
-        except requests.exceptions.RequestException as e:
+        except httpx.HTTPError as e:
             raise Exception(f"Failed to fetch weather: {str(e)}")
     
     def _parse_weather_data(self, data: dict) -> WeatherData:

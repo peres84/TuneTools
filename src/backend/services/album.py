@@ -90,7 +90,7 @@ class AlbumService:
         
         # Create new album
         log_handler.info("[NEW] Creating new weekly album...")
-        album, image_failed = self._create_new_album(
+        album, image_failed = await self._create_new_album(
             user_id,
             week_start,
             week_end,
@@ -120,7 +120,7 @@ class AlbumService:
             log_handler.warning(f"[WARN] Error getting album by week: {str(e)}")
             return None
     
-    def _create_new_album(
+    async def _create_new_album(
         self,
         user_id: str,
         week_start: datetime,
@@ -142,11 +142,11 @@ class AlbumService:
             image_failed = False
         elif use_default_cover:
             log_handler.info("[IMAGE] Using default app logo")
-            artwork_data = self.image_service._generate_default_placeholder()
+            artwork_data = await self.image_service._generate_default_placeholder()
             image_failed = False
         else:
             log_handler.info("[IMAGE] Generating album artwork...")
-            artwork_data, image_failed = self.image_service.generate_album_artwork(
+            artwork_data, image_failed = await self.image_service.generate_album_artwork(
                 week_start=week_start.date().isoformat(),
                 week_end=week_end.date().isoformat(),
                 song_themes=song_themes,

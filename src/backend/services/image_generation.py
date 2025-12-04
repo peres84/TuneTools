@@ -4,7 +4,7 @@ Generates album artwork for weekly albums
 """
 import os
 import base64
-import requests
+import httpx
 from typing import Optional
 from dotenv import load_dotenv
 from io import BytesIO
@@ -44,7 +44,7 @@ class ImageGenerationService:
                 "Add GEMINI_API_KEY or OPENAI_API_KEY to .env"
             )
     
-    def generate_album_artwork(
+    async def generate_album_artwork(
         self,
         week_start: str,
         week_end: str,
@@ -85,7 +85,7 @@ class ImageGenerationService:
         if self.openai_available:
             try:
                 log_handler.info("[IMAGE] Trying OpenAI DALL-E (fallback)...")
-                image_data = self._generate_with_dalle(prompt)
+                image_data = await self._generate_with_dalle(prompt)
                 log_handler.info("[OK] DALL-E generated artwork")
                 return image_data, False
             except Exception as e:
@@ -169,7 +169,7 @@ Visual elements:
             raise ValueError("Response does not contain image data")
     
     
-    def _generate_with_dalle(self, prompt: str) -> bytes:
+    async def _generate_with_dalle(self, prompt: str) -> bytes:
         """Generate image using OpenAI DALL-E"""
         import openai
         
@@ -187,10 +187,12 @@ Visual elements:
         image_url = response.data[0].url
         
         # Download image
-        image_response = requests.get(image_url, timeout=30)
-        image_response.raise_for_status()
-        
-        return image_response.content
+        import httpx
+        async with httpx.AsyncClient() as client:
+            image_response = await client.get(image_url, timeout=30)
+            image_response.raise_for_status()
+            
+            return image_response.content
     
     def save_image(self, image_data: bytes, output_path: str):
         """
@@ -232,7 +234,7 @@ Visual elements:
         
         return output.getvalue()
     
-    def _generate_default_placeholder(self) -> bytes:
+    async def _generate_default_placeholder(self) -> bytes:
         """
         Use default asset image when all services fail
         
@@ -240,6 +242,7 @@ Visual elements:
             bytes: PNG image data from assets folder
         """
         import random
+        import aiofiles
         
         # Get path to assets folder
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -257,8 +260,8 @@ Visual elements:
         image_path = os.path.join(assets_dir, selected_image)
         
         try:
-            with open(image_path, 'rb') as f:
-                image_data = f.read()
+            async with aiofiles.open(image_path, 'rb') as f:
+                image_data = await f.read()
             
             log_handler.info(f"[OK] Using fallback asset: {selected_image}")
             return image_data

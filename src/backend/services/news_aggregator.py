@@ -2,7 +2,7 @@
 News Aggregator Service with fallback logic and 70/30 distribution
 """
 import os
-import requests
+import httpx
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -32,7 +32,7 @@ class NewsAggregatorService:
         self.cache: Dict[str, tuple[List[NewsArticle], float]] = {}
         self.cache_ttl = 3600  # 1 hour in seconds
     
-    def fetch_news(
+    async def fetch_news(
         self,
         user_categories: List[str],
         location: str = "US",
@@ -67,14 +67,14 @@ class NewsAggregatorService:
         log_handler.info(f"[NEWS] Fetching news: {preferred_count} preferred + {general_count} general")
         
         # Fetch preferred category news
-        preferred_articles = self._fetch_with_fallback(
+        preferred_articles = await self._fetch_with_fallback(
             categories=user_categories,
             location=location,
             count=preferred_count
         )
         
         # Fetch general news
-        general_articles = self._fetch_with_fallback(
+        general_articles = await self._fetch_with_fallback(
             categories=None,  # General news
             location=location,
             count=general_count
@@ -89,7 +89,7 @@ class NewsAggregatorService:
         
         return unique_articles[:max_articles]
     
-    def _fetch_with_fallback(
+    async def _fetch_with_fallback(
         self,
         categories: Optional[List[str]],
         location: str,
@@ -104,7 +104,7 @@ class NewsAggregatorService:
         if SERPAPI_KEY:
             try:
                 log_handler.info("[SEARCH] Trying SerpAPI (primary)...")
-                articles = self._fetch_from_serpapi(categories, location, count)
+                articles = await self._fetch_from_serpapi(categories, location, count)
                 if articles:
                     log_handler.info(f"[OK] SerpAPI returned {len(articles)} articles")
                     return articles
@@ -115,7 +115,7 @@ class NewsAggregatorService:
         if NEWSAPI_KEY:
             try:
                 log_handler.info("[SEARCH] Trying NewsAPI (fallback 1)...")
-                articles = self._fetch_from_newsapi(categories, location, count)
+                articles = await self._fetch_from_newsapi(categories, location, count)
                 if articles:
                     log_handler.info(f"[OK] NewsAPI returned {len(articles)} articles")
                     return articles
@@ -126,7 +126,7 @@ class NewsAggregatorService:
         if WORLDNEWS_API_KEY:
             try:
                 log_handler.info("[SEARCH] Trying WorldNewsAPI (fallback 2)...")
-                articles = self._fetch_from_worldnews(categories, location, count)
+                articles = await self._fetch_from_worldnews(categories, location, count)
                 if articles:
                     log_handler.info(f"[OK] WorldNewsAPI returned {len(articles)} articles")
                     return articles
@@ -136,7 +136,7 @@ class NewsAggregatorService:
         log_handler.error("All news APIs failed")
         return []
     
-    def _fetch_from_serpapi(
+    async def _fetch_from_serpapi(
         self,
         categories: Optional[List[str]],
         location: str,
@@ -161,10 +161,11 @@ class NewsAggregatorService:
         if location and location.strip():
             params["gl"] = location.lower()
         
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
         articles = []
         
         for item in data.get("news_results", [])[:count]:
@@ -181,7 +182,7 @@ class NewsAggregatorService:
         
         return articles
     
-    def _fetch_from_newsapi(
+    async def _fetch_from_newsapi(
         self,
         categories: Optional[List[str]],
         location: str,
@@ -228,10 +229,11 @@ class NewsAggregatorService:
                         params["category"] = category_map[cat.lower()]
                         break
         
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
         articles = []
         
         for item in data.get("articles", [])[:count]:
@@ -248,7 +250,7 @@ class NewsAggregatorService:
         
         return articles
     
-    def _fetch_from_worldnews(
+    async def _fetch_from_worldnews(
         self,
         categories: Optional[List[str]],
         location: str,
@@ -275,10 +277,11 @@ class NewsAggregatorService:
         if location and location.strip():
             params["source-countries"] = location.lower()
         
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
         articles = []
         
         for item in data.get("news", [])[:count]:

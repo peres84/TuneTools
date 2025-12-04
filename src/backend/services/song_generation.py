@@ -39,7 +39,7 @@ class SongGenerationService:
         self.endpoint = runpod.Endpoint(ENDPOINT_ID)
         self.default_timeout = 900  # 15 minutes in seconds
     
-    def generate_song(
+    async def generate_song(
         self,
         genre_tags: str,
         lyrics: str,
@@ -84,11 +84,13 @@ class SongGenerationService:
         start_time = time.time()
         
         try:
-            # Send request with timeout
+            # Send request with timeout (wrapped in thread to prevent blocking)
             if progress_callback:
                 progress_callback("Waiting for YuE model (7-12 minutes)...")
             
-            job_result = self.endpoint.run_sync(
+            import asyncio
+            job_result = await asyncio.to_thread(
+                self.endpoint.run_sync,
                 request_input,
                 timeout=self.default_timeout
             )
