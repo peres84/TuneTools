@@ -19,8 +19,8 @@ from models.user import (
     UserPreferencesUpdate
 )
 from models.context import NewsArticle
-from db.supabase_client import supabase
-from utils.middleware import get_current_user
+from db.supabase_client import supabase, get_supabase_client
+from utils.middleware import get_current_user, get_current_user_token
 from utils.custom_logger import log_handler
 from utils.limiter import limiter as SlowLimiter
 from utils.validators import validate_email_format
@@ -166,7 +166,7 @@ async def get_user_preferences(request: Request, user_id: str = Depends(get_curr
 async def update_user_preferences(
     request: Request,
     preferences: UserPreferencesUpdate,
-    user_id: str = Depends(get_current_user)
+    auth_data: tuple[str, str] = Depends(get_current_user_token)
 ):
     """
     Update current user's preferences
@@ -181,7 +181,12 @@ async def update_user_preferences(
     Returns:
         UserPreferences: Updated preferences
     """
+    user_id, access_token = auth_data
+    
     try:
+        # Get user-scoped Supabase client for RLS context
+        user_supabase = get_supabase_client(access_token)
+        
         # Build update data (only include non-None fields)
         update_data = {}
         if preferences.categories is not None:
@@ -201,7 +206,7 @@ async def update_user_preferences(
         
         # Update preferences
         response = (
-            supabase.table("user_preferences")
+            user_supabase.table("user_preferences")
             .update(update_data)
             .eq("user_id", user_id)
             .execute()
@@ -232,7 +237,7 @@ async def update_user_preferences(
 async def create_user_preferences(
     request: Request,
     preferences: UserPreferencesCreate,
-    user_id: str = Depends(get_current_user)
+    auth_data: tuple[str, str] = Depends(get_current_user_token)
 ):
     """
     Create user preferences (typically during onboarding)
@@ -248,10 +253,15 @@ async def create_user_preferences(
     Returns:
         UserPreferences: Created preferences
     """
+    user_id, access_token = auth_data
+    
     try:
+        # Get user-scoped Supabase client for RLS context
+        user_supabase = get_supabase_client(access_token)
+        
         # Check if preferences already exist
         existing = (
-            supabase.table("user_preferences")
+            user_supabase.table("user_preferences")
             .select("id")
             .eq("user_id", user_id)
             .execute()
@@ -273,7 +283,7 @@ async def create_user_preferences(
         }
         
         response = (
-            supabase.table("user_preferences")
+            user_supabase.table("user_preferences")
             .insert(insert_data)
             .execute()
         )

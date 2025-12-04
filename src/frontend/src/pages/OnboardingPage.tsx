@@ -110,7 +110,7 @@ export function OnboardingPage() {
                 </h3>
                 <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
                 <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-                  Make sure the backend server is running at http://localhost:8000
+                  Please try again or contact support if the issue persists.
                 </p>
               </div>
             </div>

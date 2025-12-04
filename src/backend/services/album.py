@@ -54,7 +54,7 @@ class AlbumService:
         
         return week_start, week_end
     
-    def get_or_create_weekly_album(
+    async def get_or_create_weekly_album(
         self,
         user_id: str,
         song_themes: List[str],

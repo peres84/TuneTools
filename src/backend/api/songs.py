@@ -178,7 +178,7 @@ async def generate_song(
         elif use_default:
             log_handler.info("[ALBUM] Using default app logo as cover")
         
-        album, image_generation_failed = album_service.get_or_create_weekly_album(
+        album, image_generation_failed = await album_service.get_or_create_weekly_album(
             user_id=user_id,
             song_themes=[song_content['title']],
             user_preferences=context_data.get('user_preferences', {}),

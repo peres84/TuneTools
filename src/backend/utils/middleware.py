@@ -148,6 +148,28 @@ async def get_current_user(
     return AuthMiddleware.get_user_from_token(credentials)
 
 
+async def get_current_user_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> tuple[str, str]:
+    """
+    Dependency to get current authenticated user ID and access token
+    
+    Usage in route:
+        @app.post("/preferences")
+        async def create_prefs(user_id: str, token: str = Depends(get_current_user_token)):
+            # Use token for RLS context
+            pass
+    
+    Args:
+        credentials: HTTP Bearer credentials from request
+        
+    Returns:
+        tuple[str, str]: (user_id, access_token)
+    """
+    user_id = AuthMiddleware.get_user_from_token(credentials)
+    return user_id, credentials.credentials
+
+
 async def optional_auth(
     request: Request
 ) -> Optional[str]:

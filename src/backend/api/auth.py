@@ -86,16 +86,9 @@ async def signup(request: Request, signup_data: SignupRequest):
         if response.user:
             log_handler.info(f"[AUTH] User created: {response.user.id}")
             
-            # Create user profile (trigger should handle this, but backup)
-            try:
-                supabase.table("user_profiles").insert({
-                    "id": str(response.user.id),
-                    "onboarding_completed": False
-                }).execute()
-                log_handler.info(f"[AUTH] User profile created for: {response.user.id}")
-            except Exception as profile_error:
-                # Profile might already exist from trigger
-                log_handler.warning(f"[AUTH] Profile creation skipped: {str(profile_error)}")
+            # User profile is automatically created by database trigger (handle_new_user)
+            # No need to manually insert - the trigger handles it with proper RLS context
+            log_handler.info(f"[AUTH] User profile will be created by database trigger")
             
             return {
                 "user": {
