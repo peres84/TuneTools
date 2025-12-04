@@ -136,7 +136,7 @@
     "song_generation": {
         "runpod_timeout_seconds": 900,
         "max_retries": 3,
-        "daily_limit_per_user": 2
+        "daily_limit_per_user": 5
     },
     "news": {
         "primary_api": "serpapi",
