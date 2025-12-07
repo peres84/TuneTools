@@ -476,6 +476,34 @@ async def change_password(
         from supabase import create_client
         import os
         
+        # Get user email first
+        user_response = supabase.table("user_profiles").select("*").eq("id", user_id).single().execute()
+        if not user_response.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get user email from auth
+        user_auth = supabase.auth.admin.get_user_by_id(user_id)
+        user_email = user_auth.user.email
+        
+        # Verify current password by attempting to sign in
+        try:
+            supabase.auth.sign_in_with_password({
+                "email": user_email,
+                "password": current_password
+            })
+        except Exception:
+            raise HTTPException(
+                status_code=401,
+                detail="Current password is incorrect"
+            )
+        
+        # Validate new password
+        if len(new_password) < 8:
+            raise HTTPException(
+                status_code=400,
+                detail="New password must be at least 8 characters long"
+            )
+        
         # Create admin client
         supabase_url = os.getenv("SUPABASE_URL")
         service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -484,13 +512,6 @@ async def change_password(
             raise HTTPException(status_code=500, detail="Server configuration error")
         
         admin_client = create_client(supabase_url, service_role_key)
-        
-        # Validate new password
-        if len(new_password) < 8:
-            raise HTTPException(
-                status_code=400,
-                detail="New password must be at least 8 characters long"
-            )
         
         # Update password using admin API
         admin_client.auth.admin.update_user_by_id(
