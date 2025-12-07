@@ -239,13 +239,22 @@ export function SettingsPage() {
           <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
             <div className="flex items-start gap-3">
               <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-              <div>
+              <div className="flex-1">
                 <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-1">
                   Failed to Load Settings
                 </h3>
-                <p className="text-sm text-red-700 dark:text-red-400">
+                <p className="text-sm text-red-700 dark:text-red-400 mb-3">
                   {getUserFriendlyErrorMessage(error)}
                 </p>
+                {/* Check if it's a 404 error (missing preferences) */}
+                {(error as any)?.status === 404 && (
+                  <a
+                    href="/onboarding"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                  >
+                    Complete Onboarding
+                  </a>
+                )}
               </div>
             </div>
           </div>
