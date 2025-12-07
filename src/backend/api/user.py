@@ -141,7 +141,7 @@ async def get_user_preferences(request: Request, user_id: str = Depends(get_curr
             .execute()
         )
         
-        if not response.data:
+        if not response or not response.data:
             raise HTTPException(
                 status_code=404,
                 detail="User preferences not found. Please complete onboarding."
@@ -342,7 +342,7 @@ async def get_user_news(
             .execute()
         )
         
-        if not prefs_response.data:
+        if not prefs_response or not prefs_response.data:
             raise HTTPException(
                 status_code=404,
                 detail="User preferences not found. Please complete onboarding."
