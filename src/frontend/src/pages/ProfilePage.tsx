@@ -345,7 +345,7 @@ export function ProfilePage() {
                   <p className="font-medium text-gray-900 dark:text-white">
                     {exportMutation.isPending ? 'Exporting...' : 'Export Data'}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Download all your songs and data</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Download all your data</p>
                 </button>
                 <button 
                   onClick={() => setShowDeleteModal(true)}
