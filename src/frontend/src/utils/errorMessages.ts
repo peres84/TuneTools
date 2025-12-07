@@ -47,7 +47,8 @@ export function getUserFriendlyErrorMessage(error: unknown): string {
 
     // Not found errors
     if (errorObj.status === 404 || errorObj.code === 'NOT_FOUND') {
-      return 'The requested resource was not found.'
+      // Return custom message if available (e.g., "Please complete onboarding")
+      return errorObj.message || 'The requested resource was not found.'
     }
 
     // Server errors

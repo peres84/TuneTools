@@ -40,7 +40,13 @@ export function NewsPage() {
         }
       )
 
-      if (!newsResponse.ok) throw new Error('Failed to fetch news')
+      if (!newsResponse.ok) {
+        const errorData = await newsResponse.json().catch(() => ({}))
+        const errorMessage = errorData.detail || 'Failed to fetch news'
+        const error: any = new Error(errorMessage)
+        error.status = newsResponse.status
+        throw error
+      }
       const newsData = await newsResponse.json()
 
       const result = {

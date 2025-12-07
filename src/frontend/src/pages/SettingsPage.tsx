@@ -80,7 +80,13 @@ export function SettingsPage() {
         `${import.meta.env.VITE_API_BASE_URL}/api/user/preferences`
       )
 
-      if (!response.ok) throw new Error('Failed to fetch preferences')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.detail || 'Failed to fetch preferences'
+        const error: any = new Error(errorMessage)
+        error.status = response.status
+        throw error
+      }
       const prefs = await response.json()
 
       // Save to localStorage cache

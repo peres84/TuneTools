@@ -137,7 +137,7 @@ async def get_user_preferences(request: Request, user_id: str = Depends(get_curr
             supabase.table("user_preferences")
             .select("*")
             .eq("user_id", user_id)
-            .single()
+            .maybe_single()  # Returns None if no results instead of throwing error
             .execute()
         )
         
@@ -338,7 +338,7 @@ async def get_user_news(
             supabase.table("user_preferences")
             .select("categories")
             .eq("user_id", user_id)
-            .single()
+            .maybe_single()  # Returns None if no results instead of throwing error
             .execute()
         )
         
